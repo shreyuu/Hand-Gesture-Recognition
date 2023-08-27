@@ -7,6 +7,12 @@ def detect_fingers(frame):
     _, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
 
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Check if any contours were found
+    if not contours:
+        cv2.putText(frame, "No hand detected", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        return frame
+
     hand_contour = max(contours, key=cv2.contourArea)
 
     hull = cv2.convexHull(hand_contour, returnPoints=False)
