@@ -3,6 +3,8 @@ import numpy as np
 import mediapipe as mp
 import tensorflow as tf
 from tensorflow.keras.models import load_model
+from gtts import gTTS
+import os
 
 # initialize mediapipe
 mpHands = mp.solutions.hands
@@ -58,6 +60,10 @@ while True:
             # print(prediction)
             classID = np.argmax(prediction)
             className = classNames[classID]
+            
+            tts = gTTS(text=className, lang='en')  # New line
+            tts.save('gesture.mp3')  # New line
+            os.system('afplay gesture.mp3')  # New line
 
     # show the prediction on the frame
     cv2.putText(frame, className, (10, 50), cv2.FONT_HERSHEY_SIMPLEX,                    1, (0,0,255), 2, cv2.LINE_AA)
