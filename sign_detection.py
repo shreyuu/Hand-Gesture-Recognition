@@ -1,23 +1,8 @@
-# TechVidvan hand Gesture Recognizer
-# import necessary packages
 import cv2
 import numpy as np
 import mediapipe as mp
 import tensorflow as tf
 from tensorflow.keras.models import load_model
-import pyttsx3
-import time
-
-
-engine = pyttsx3.init('sapi5')
-voices = engine.getProperty('voices') #gets you the details of the current voice
-engine.setProperty('voice', voices[1].id)  # 0-male voice , 1-female voice
-
-
-def speak(audio):
-  engine.say(audio)
-  engine.runAndWait()
-  time.sleep(1)
 
 # initialize mediapipe
 mpHands = mp.solutions.hands
@@ -33,12 +18,14 @@ classNames = f.read().split('\n')
 f.close()
 print(classNames)
 
+
 # Initialize the webcam
 cap = cv2.VideoCapture(0)
 
 while True:
     # Read each frame from the webcam
     _, frame = cap.read()
+
     x, y, c = frame.shape
 
     # Flip the frame vertically
@@ -49,6 +36,7 @@ while True:
     result = hands.process(framergb)
 
     # print(result)
+    
     className = ''
 
     # post process the result
@@ -59,6 +47,7 @@ while True:
                 # print(id, lm)
                 lmx = int(lm.x * x)
                 lmy = int(lm.y * y)
+
                 landmarks.append([lmx, lmy])
 
             # Drawing landmarks on frames
@@ -71,15 +60,15 @@ while True:
             className = classNames[classID]
 
     # show the prediction on the frame
-    cv2.putText(frame, className, (10, 50), cv2.FONT_HERSHEY_SIMPLEX,
-                   1, (0,0,255), 2, cv2.LINE_AA)
-    speak(className)
+    cv2.putText(frame, className, (10, 50), cv2.FONT_HERSHEY_SIMPLEX,                    1, (0,0,255), 2, cv2.LINE_AA)
 
     # Show the final output
-    cv2.imshow("Output", frame)
+    cv2.imshow("Output", frame) 
+
     if cv2.waitKey(1) == ord('q'):
         break
 
 # release the webcam and destroy all active windows
 cap.release()
+
 cv2.destroyAllWindows()
