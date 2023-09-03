@@ -1,4 +1,3 @@
-
 # Hand Gesture Recognition with MediaPipe and TensorFlow
 
 **Table of Contents**
