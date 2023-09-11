@@ -22,7 +22,7 @@ print(classNames)
 
 
 # Initialize the webcam
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)  #if webcam not working change to (0)/(1)/(2)
 
 while True:
     # Read each frame from the webcam
