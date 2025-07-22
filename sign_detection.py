@@ -1,93 +1,104 @@
 import cv2
 import numpy as np
-import mediapipe as mp
 import tensorflow as tf
 from keras.models import load_model
 from gtts import gTTS
 import os
-
-# initialize mediapipe
-mpHands = mp.solutions.hands
-hands = mpHands.Hands(max_num_hands=1, min_detection_confidence=0.7)
-mpDraw = mp.solutions.drawing_utils
+import time
+from hand_tracking.HandTrackingModule import handDetector
 
 # Load the gesture recognizer model
 model = load_model("models/mp_hand_gesture")
 
 # Load class names
-f = open("gesture.names", "r")
-classNames = f.read().split("\n")
-f.close()
+with open("gesture.names", "r") as f:
+    classNames = f.read().split("\n")
 print(classNames)
 
 # Voice output flag - set to False to disable voice
-enable_voice = False  # Change to True when you want to enable voice again
+enable_voice = False  # Change to True when you want to enable voice
+last_spoken_time = 0
+cooldown_time = 2  # seconds between voice announcements
 
 # Initialize the webcam
 cap = cv2.VideoCapture(1)  # if webcam not working change to (0)/(1)/(2)
 
+# Initialize hand detector
+detector = handDetector(detectionCon=0.7, maxHands=1)
+
 while True:
     # Read each frame from the webcam
-    _, frame = cap.read()
+    success, frame = cap.read()
+    if not success:
+        print("Failed to capture image")
+        continue
 
-    x, y, c = frame.shape
-
-    # Flip the frame vertically
+    # Flip the frame horizontally for a more intuitive mirror view
     frame = cv2.flip(frame, 1)
-    framergb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Get hand landmark prediction
-    result = hands.process(framergb)
+    # Find hands
+    frame = detector.findHands(frame)
 
-    # print(result)
+    # Find position of hand landmarks
+    lmList = detector.findPosition(frame, draw=False)
 
     className = ""
 
-    # post process the result
-    if result.multi_hand_landmarks:
-        landmarks = []
-        for handslms in result.multi_hand_landmarks:
-            for lm in handslms.landmark:
-                # print(id, lm)
-                lmx = int(lm.x * x)
-                lmy = int(lm.y * y)
+    # Process landmarks if hand is detected
+    if lmList:
+        # Convert to format expected by model
+        landmarks = [[lm[1], lm[2]] for lm in lmList]
 
-                landmarks.append([lmx, lmy])
+        # Predict gesture
+        prediction = model.predict([landmarks])
+        classID = np.argmax(prediction)
+        className = classNames[classID]
+        confidence = float(prediction[0][classID])
 
-            # Drawing landmarks on frames
-            mpDraw.draw_landmarks(frame, handslms, mpHands.HAND_CONNECTIONS)
+        # Generate and play voice feedback with cooldown
+        current_time = time.time()
+        if enable_voice and (current_time - last_spoken_time) > cooldown_time:
+            tts = gTTS(text=className, lang="en")
+            tts.save("gesture.mp3")
+            os.system("afplay gesture.mp3")
+            last_spoken_time = current_time
 
-            # Predict gesture
-            prediction = model.predict([landmarks])
-            # print(prediction)
-            classID = np.argmax(prediction)
-            className = classNames[classID]
+        # Display class name and confidence
+        cv2.putText(
+            frame,
+            f"{className} ({confidence:.2f})",
+            (10, 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 0, 255),
+            2,
+            cv2.LINE_AA,
+        )
 
-            # Only generate and play voice if enabled
-            if enable_voice:
-                tts = gTTS(text=className, lang="en")
-                tts.save("gesture.mp3")
-                os.system("afplay gesture.mp3")
-
-    # show the prediction on the frame
+    # Add FPS counter
     cv2.putText(
         frame,
-        className,
-        (10, 50),
+        f"Press 'q' to quit, 'v' to toggle voice",
+        (10, frame.shape[0] - 20),
         cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (255, 255, 255),
         1,
-        (0, 0, 255),
-        2,
         cv2.LINE_AA,
     )
 
     # Show the final output
-    cv2.imshow("Output", frame)
+    cv2.imshow("Hand Gesture Recognition", frame)
 
-    if cv2.waitKey(1) == ord("q"):
+    # Key handling
+    key = cv2.waitKey(1)
+    if key == ord("q"):
         break
+    elif key == ord("v"):
+        enable_voice = not enable_voice
+        status = "enabled" if enable_voice else "disabled"
+        print(f"Voice feedback {status}")
 
-# release the webcam and destroy all active windows
+# Release resources
 cap.release()
-
 cv2.destroyAllWindows()
