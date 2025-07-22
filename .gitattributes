@@ -1,0 +1,6 @@
+# Force GitHub to recognize .pb files as binary data, not PureBasic
+*.pb binary linguist-detectable=false
+mp_hand_gesture/* linguist-vendored=true
+
+# Ensure Python files are properly detected
+*.py linguist-language=Python
