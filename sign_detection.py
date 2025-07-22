@@ -2,10 +2,11 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from keras.models import load_model
-from gtts import gTTS
 import os
 import time
 from hand_tracking.HandTrackingModule import handDetector
+from utils.audio_manager import AudioManager
+from utils.gesture_smoothing import GestureSmoother
 
 # Load the gesture recognizer model
 model = load_model("models/mp_hand_gesture")
@@ -15,10 +16,12 @@ with open("gesture.names", "r") as f:
     classNames = f.read().split("\n")
 print(classNames)
 
-# Voice output flag - set to False to disable voice
+# Initialize audio manager for non-blocking voice output
+audio_manager = AudioManager(cooldown_time=2)
 enable_voice = False  # Change to True when you want to enable voice
-last_spoken_time = 0
-cooldown_time = 2  # seconds between voice announcements
+
+# Initialize gesture smoothing
+smoother = GestureSmoother(history_length=10)
 
 # Initialize the webcam
 cap = cv2.VideoCapture(1)  # if webcam not working change to (0)/(1)/(2)
@@ -50,32 +53,44 @@ while True:
         landmarks = [[lm[1], lm[2]] for lm in lmList]
 
         # Predict gesture
-        prediction = model.predict([landmarks])
+        prediction = model.predict([landmarks], verbose=0)
         classID = np.argmax(prediction)
         className = classNames[classID]
         confidence = float(prediction[0][classID])
 
-        # Generate and play voice feedback with cooldown
-        current_time = time.time()
-        if enable_voice and (current_time - last_spoken_time) > cooldown_time:
-            tts = gTTS(text=className, lang="en")
-            tts.save("gesture.mp3")
-            os.system("afplay gesture.mp3")
-            last_spoken_time = current_time
+        # Update gesture history for smoothing
+        smoother.update(className, confidence)
+        smooth_gesture = smoother.get_dominant_gesture()
 
-        # Display class name and confidence
-        cv2.putText(
-            frame,
-            f"{className} ({confidence:.2f})",
-            (10, 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 255),
-            2,
-            cv2.LINE_AA,
-        )
+        if smooth_gesture:
+            # Generate and play voice feedback with cooldown
+            if enable_voice:
+                audio_manager.speak(smooth_gesture)
 
-    # Add FPS counter
+            # Display smoothed class name and confidence
+            cv2.putText(
+                frame,
+                f"{smooth_gesture} ({confidence:.2f})",
+                (10, 50),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 0, 255),
+                2,
+                cv2.LINE_AA,
+            )
+
+    # Add instructions
+    cv2.putText(
+        frame,
+        f"Voice: {'ON' if enable_voice else 'OFF'}",
+        (10, frame.shape[0] - 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (255, 255, 255),
+        1,
+        cv2.LINE_AA,
+    )
+
     cv2.putText(
         frame,
         f"Press 'q' to quit, 'v' to toggle voice",

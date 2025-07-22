@@ -2,11 +2,10 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from keras.models import load_model
-from gtts import gTTS
-import os
 import time
 from hand_tracking.HandTrackingModule import handDetector
 from utils.gesture_smoothing import GestureSmoother
+from utils.audio_manager import AudioManager
 import config
 
 
@@ -31,7 +30,9 @@ class GestureRecognitionApp:
 
         # Voice settings
         self.enable_voice = config.ENABLE_VOICE_DEFAULT
-        self.last_spoken_time = 0
+        self.audio_manager = AudioManager(
+            cooldown_time=config.VOICE_COOLDOWN_TIME, cache_size=config.AUDIO_CACHE_SIZE
+        )
 
         # Gesture smoothing
         self.smoother = GestureSmoother(history_length=15)
@@ -39,13 +40,9 @@ class GestureRecognitionApp:
         print(f"Loaded {len(self.classNames)} gestures: {', '.join(self.classNames)}")
 
     def speak_gesture(self, gesture_name):
-        """Generate and play audio for a gesture"""
-        current_time = time.time()
-        if (current_time - self.last_spoken_time) > config.VOICE_COOLDOWN_TIME:
-            tts = gTTS(text=gesture_name, lang=config.VOICE_LANGUAGE)
-            tts.save("gesture.mp3")
-            os.system("afplay gesture.mp3")
-            self.last_spoken_time = current_time
+        """Generate and play audio for a gesture using the audio manager"""
+        if self.enable_voice:
+            self.audio_manager.speak(gesture_name, lang=config.VOICE_LANGUAGE)
 
     def run(self):
         """Main application loop"""
@@ -79,7 +76,7 @@ class GestureRecognitionApp:
                 smooth_gesture = self.smoother.get_dominant_gesture()
 
                 # Voice feedback
-                if self.enable_voice and smooth_gesture:
+                if smooth_gesture:
                     self.speak_gesture(smooth_gesture)
 
                 # Display prediction

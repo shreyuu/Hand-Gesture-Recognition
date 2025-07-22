@@ -22,6 +22,7 @@ GESTURE_NAMES_PATH = "gesture.names"
 ENABLE_VOICE_DEFAULT = False
 VOICE_COOLDOWN_TIME = 2  # seconds between voice announcements
 VOICE_LANGUAGE = "en"
+AUDIO_CACHE_SIZE = 20  # Number of audio files to cache
 
 # UI settings
 FONT = cv2.FONT_HERSHEY_SIMPLEX
