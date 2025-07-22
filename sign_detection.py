@@ -20,6 +20,8 @@ classNames = f.read().split("\n")
 f.close()
 print(classNames)
 
+# Voice output flag - set to False to disable voice
+enable_voice = False  # Change to True when you want to enable voice again
 
 # Initialize the webcam
 cap = cv2.VideoCapture(1)  # if webcam not working change to (0)/(1)/(2)
@@ -61,9 +63,11 @@ while True:
             classID = np.argmax(prediction)
             className = classNames[classID]
 
-            tts = gTTS(text=className, lang="en")  # New line
-            tts.save("gesture.mp3")  # New line
-            os.system("afplay gesture.mp3")  # New line
+            # Only generate and play voice if enabled
+            if enable_voice:
+                tts = gTTS(text=className, lang="en")
+                tts.save("gesture.mp3")
+                os.system("afplay gesture.mp3")
 
     # show the prediction on the frame
     cv2.putText(
