@@ -87,3 +87,52 @@ class AudioManager:
                     del self.audio_cache[gesture]
                     del self.gesture_frequency[gesture]
                     break
+
+    def speak_with_voice(self, text, lang="en", voice_speed=1.0):
+        """
+        Speak text with specified language and speed
+        """
+        current_time = time.time()
+
+        # Respect cooldown period
+        if (current_time - self.last_spoken_time) <= self.cooldown_time:
+            return False
+
+        # Update frequency count
+        self.gesture_frequency[text] += 1
+
+        # Set last spoken time
+        self.last_spoken_time = current_time
+
+        # Start a new thread for audio processing
+        if self.audio_thread is None or not self.audio_thread.is_alive():
+            self.audio_thread = threading.Thread(
+                target=self._process_audio_with_voice,
+                args=(text, lang, voice_speed),
+                daemon=True,
+            )
+            self.audio_thread.start()
+
+        return True
+
+    def _process_audio_with_voice(self, text, lang, voice_speed):
+        """Process and play audio with specific voice parameters"""
+        with self.lock:
+            cache_key = f"{text}_{lang}_{voice_speed}"
+
+            # Check if we already have this text cached
+            if cache_key in self.audio_cache:
+                audio_path = self.audio_cache[cache_key]
+            else:
+                # Generate new audio file
+                audio_path = os.path.join(
+                    self.temp_dir, f"gesture_{hash(cache_key)}.mp3"
+                )
+                tts = gTTS(text=text, lang=lang, slow=(voice_speed < 1.0))
+                tts.save(audio_path)
+
+                # Add to cache
+                self._update_cache(cache_key, audio_path)
+
+            # Play the audio
+            os.system(f"afplay {audio_path}")

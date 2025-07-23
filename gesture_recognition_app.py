@@ -6,6 +6,7 @@ import time
 from hand_tracking.HandTrackingModule import handDetector
 from utils.gesture_smoothing import GestureSmoother
 from utils.audio_manager import AudioManager
+from utils.performance_analyzer import PerformanceAnalyzer
 import config
 
 
@@ -37,6 +38,9 @@ class GestureRecognitionApp:
         # Gesture smoothing
         self.smoother = GestureSmoother(history_length=15)
 
+        # Add performance analyzer
+        self.perf_analyzer = PerformanceAnalyzer()
+
         print(f"Loaded {len(self.classNames)} gestures: {', '.join(self.classNames)}")
 
     def speak_gesture(self, gesture_name):
@@ -47,6 +51,8 @@ class GestureRecognitionApp:
     def run(self):
         """Main application loop"""
         while True:
+            self.perf_analyzer.start_frame()
+
             # Read frame
             success, frame = self.cap.read()
             if not success:
@@ -93,6 +99,12 @@ class GestureRecognitionApp:
             # Display UI elements
             self.draw_ui(frame)
 
+            # Before displaying the frame
+            frame = self.perf_analyzer.draw_metrics(frame)
+
+            # End frame timing
+            self.perf_analyzer.end_frame()
+
             # Show frame
             cv2.imshow("Hand Gesture Recognition", frame)
 
@@ -105,6 +117,13 @@ class GestureRecognitionApp:
                 print(
                     f"Voice feedback {'enabled' if self.enable_voice else 'disabled'}"
                 )
+            elif key == ord("r"):
+                # Pause the app and start recording mode
+                cv2.destroyWindow("Hand Gesture Recognition")
+                from gesture_recorder import record_gesture
+
+                record_gesture()
+                # Resume the app when recording is done
 
         # Release resources
         self.cap.release()

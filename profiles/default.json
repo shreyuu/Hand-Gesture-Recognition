@@ -1,0 +1,7 @@
+{
+    "enable_voice": false,
+    "voice_language": "en",
+    "detection_confidence": 0.7,
+    "camera_index": 1,
+    "theme": "default"
+}
