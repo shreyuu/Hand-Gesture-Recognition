@@ -11,32 +11,50 @@ import config
 
 
 class GestureRecognitionApp:
-    def __init__(self):
+    def __init__(self, profile=None):
+        # Profile settings override config defaults when present
+        self.profile = profile
+
+        def setting(name, default):
+            return profile.get(name, default) if profile is not None else default
+
         # Load the model
         self.model = load_model(config.MODEL_PATH)
 
-        # Load class names
+        # Load class names (ignore blank lines from trailing newlines)
         with open(config.GESTURE_NAMES_PATH, "r") as f:
-            self.classNames = f.read().split("\n")
+            self.classNames = [line.strip() for line in f if line.strip()]
 
         # Initialize the camera
-        self.cap = cv2.VideoCapture(config.CAMERA_INDEX)
+        camera_index = setting("camera_index", config.CAMERA_INDEX)
+        self.cap = cv2.VideoCapture(camera_index)
         self.cap.set(3, config.CAMERA_WIDTH)
         self.cap.set(4, config.CAMERA_HEIGHT)
+        if not self.cap.isOpened():
+            raise RuntimeError(
+                f"Could not open camera index {camera_index}. "
+                "Set GESTURE_CAM_INDEX or the profile's camera_index."
+            )
 
         # Initialize hand detector
         self.detector = handDetector(
-            detectionCon=config.DETECTION_CONFIDENCE, maxHands=config.MAX_HANDS
+            detectionCon=setting("detection_confidence", config.DETECTION_CONFIDENCE),
+            trackCon=config.TRACKING_CONFIDENCE,
+            maxHands=config.MAX_HANDS,
         )
 
         # Voice settings
-        self.enable_voice = config.ENABLE_VOICE_DEFAULT
+        self.enable_voice = setting("enable_voice", config.ENABLE_VOICE_DEFAULT)
+        self.voice_language = setting("voice_language", config.VOICE_LANGUAGE)
         self.audio_manager = AudioManager(
             cooldown_time=config.VOICE_COOLDOWN_TIME, cache_size=config.AUDIO_CACHE_SIZE
         )
 
         # Gesture smoothing
-        self.smoother = GestureSmoother(history_length=15)
+        self.smoother = GestureSmoother(
+            history_length=config.SMOOTHING_HISTORY_LENGTH,
+            confidence_threshold=config.CONFIDENCE_THRESHOLD,
+        )
 
         # Add performance analyzer
         self.perf_analyzer = PerformanceAnalyzer()
@@ -46,10 +64,18 @@ class GestureRecognitionApp:
     def speak_gesture(self, gesture_name):
         """Generate and play audio for a gesture using the audio manager"""
         if self.enable_voice:
-            self.audio_manager.speak(gesture_name, lang=config.VOICE_LANGUAGE)
+            self.audio_manager.speak(gesture_name, lang=self.voice_language)
 
     def run(self):
         """Main application loop"""
+        try:
+            self._loop()
+        finally:
+            # Always release resources, even on error or Ctrl-C
+            self.cap.release()
+            cv2.destroyAllWindows()
+
+    def _loop(self):
         while True:
             self.perf_analyzer.start_frame()
 
@@ -124,10 +150,6 @@ class GestureRecognitionApp:
 
                 record_gesture()
                 # Resume the app when recording is done
-
-        # Release resources
-        self.cap.release()
-        cv2.destroyAllWindows()
 
     def draw_ui(self, frame):
         """Draw UI elements on the frame"""

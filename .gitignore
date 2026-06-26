@@ -28,3 +28,5 @@ gesture.mp3
 output_audio.mp3
 tempCodeRunnerFile.py
 *.mp3
+.venv
+.DS_Store

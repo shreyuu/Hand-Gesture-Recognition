@@ -50,23 +50,30 @@ def main():
     # Parse arguments
     args = parser.parse_args()
 
+    # When no subcommand is given, ask interactively (default: recognize)
+    mode = args.mode
+    if mode is None and len(sys.argv) == 1:
+        choice = input(
+            "Enter mode (recognize/record/train/settings) [recognize]: "
+        ).strip().lower()
+        mode = choice or "recognize"
+
     # Handle different modes
-    if args.mode == "record" or (
-        len(sys.argv) == 1
-        and input("Enter mode (recognize/record/train/settings): ").lower() == "record"
-    ):
+    if mode == "record":
         record_gesture()
-    elif args.mode == "train":
+    elif mode == "train":
         trainer = GestureTrainer()
-        trainer.train(epochs=args.epochs, batch_size=args.batch_size)
-    elif args.mode == "settings":
-        profile = UserProfile(args.profile)
+        trainer.train(
+            epochs=getattr(args, "epochs", 50),
+            batch_size=getattr(args, "batch_size", 16),
+        )
+    elif mode == "settings":
+        profile = UserProfile(getattr(args, "profile", "default"))
         dialog = SettingsDialog(profile)
         dialog.show()
     else:  # Default to recognize mode
-        profile_name = args.profile if hasattr(args, "profile") else "default"
-        profile = UserProfile(profile_name)
-        app = GestureRecognitionApp()
+        profile = UserProfile(getattr(args, "profile", "default"))
+        app = GestureRecognitionApp(profile=profile)
         app.run()
 
 
