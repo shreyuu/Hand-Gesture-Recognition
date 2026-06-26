@@ -1,12 +1,16 @@
+from collections import Counter, deque
+
+
 class GestureSmoother:
     """
     Smooths gesture predictions to prevent rapid flickering between gestures
     """
 
-    def __init__(self, history_length=10, confidence_threshold=0.5):
-        self.history = []
+    def __init__(self, history_length=10, confidence_threshold=0.5, dominance=0.4):
+        self.history = deque(maxlen=history_length)
         self.history_length = history_length
         self.confidence_threshold = confidence_threshold
+        self.dominance = dominance
 
     def update(self, gesture_name, confidence):
         """
@@ -16,36 +20,16 @@ class GestureSmoother:
         if confidence >= self.confidence_threshold:
             self.history.append(gesture_name)
 
-        # Keep history at the desired length
-        if len(self.history) > self.history_length:
-            self.history.pop(0)
-
     def get_dominant_gesture(self):
         """
-        Return the most frequent gesture in the history
+        Return the most frequent gesture in the history, but only if it is
+        dominant enough (appears in at least `dominance` of recent frames).
         """
         if not self.history:
             return ""
 
-        # Count occurrences of each gesture
-        gesture_counts = {}
-        for gesture in self.history:
-            if gesture in gesture_counts:
-                gesture_counts[gesture] += 1
-            else:
-                gesture_counts[gesture] = 1
+        dominant_gesture, max_count = Counter(self.history).most_common(1)[0]
 
-        # Find the most common gesture
-        dominant_gesture = ""
-        max_count = 0
-
-        for gesture, count in gesture_counts.items():
-            if count > max_count:
-                max_count = count
-                dominant_gesture = gesture
-
-        # Only return if it appears in at least 40% of the history
-        if max_count >= self.history_length * 0.4:
+        if max_count >= len(self.history) * self.dominance:
             return dominant_gesture
-        else:
-            return ""
+        return ""
