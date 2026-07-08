@@ -16,7 +16,7 @@ def get_env(key, default):
 
 
 # Camera settings
-CAMERA_INDEX = int(get_env("GESTURE_CAM_INDEX", "1"))
+CAMERA_INDEX = int(get_env("GESTURE_CAM_INDEX", "0"))
 CAMERA_WIDTH = int(get_env("GESTURE_CAM_WIDTH", "640"))
 CAMERA_HEIGHT = int(get_env("GESTURE_CAM_HEIGHT", "480"))
 
