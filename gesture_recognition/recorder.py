@@ -3,7 +3,7 @@ import numpy as np
 import os
 import json
 import time
-from hand_tracking.HandTrackingModule import handDetector
+from gesture_recognition.tracking.hand_detector import handDetector
 
 
 def record_gesture():

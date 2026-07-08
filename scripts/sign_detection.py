@@ -3,16 +3,24 @@ import numpy as np
 import tensorflow as tf
 from keras.models import load_model
 import os
+import sys
 import time
-from hand_tracking.HandTrackingModule import handDetector
-from utils.audio_manager import AudioManager
-from utils.gesture_smoothing import GestureSmoother
+
+# Legacy standalone demo. Make the project root importable so the app package
+# resolves when this script is run directly (e.g. `python scripts/sign_detection.py`).
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+from gesture_recognition.tracking.hand_detector import handDetector
+from gesture_recognition.services.audio_manager import AudioManager
+from gesture_recognition.services.gesture_smoothing import GestureSmoother
 
 # Load the gesture recognizer model
-model = load_model("models/mp_hand_gesture")
+model = load_model(os.path.join(ROOT_DIR, "models", "mp_hand_gesture"))
 
 # Load class names
-with open("gesture.names", "r") as f:
+with open(os.path.join(ROOT_DIR, "data", "gesture.names"), "r") as f:
     classNames = f.read().split("\n")
 print(classNames)
 

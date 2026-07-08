@@ -3,11 +3,11 @@ import numpy as np
 import tensorflow as tf
 from keras.models import load_model
 import time
-from hand_tracking.HandTrackingModule import handDetector
-from utils.gesture_smoothing import GestureSmoother
-from utils.audio_manager import AudioManager
-from utils.performance_analyzer import PerformanceAnalyzer
-import config
+from gesture_recognition.tracking.hand_detector import handDetector
+from gesture_recognition.services.gesture_smoothing import GestureSmoother
+from gesture_recognition.services.audio_manager import AudioManager
+from gesture_recognition.services.performance_analyzer import PerformanceAnalyzer
+from gesture_recognition import config
 
 
 class GestureRecognitionApp:
@@ -146,7 +146,7 @@ class GestureRecognitionApp:
             elif key == ord("r"):
                 # Pause the app and start recording mode
                 cv2.destroyWindow("Hand Gesture Recognition")
-                from gesture_recorder import record_gesture
+                from gesture_recognition.recorder import record_gesture
 
                 record_gesture()
                 # Resume the app when recording is done

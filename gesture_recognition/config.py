@@ -5,6 +5,10 @@ Configuration settings for the Hand Gesture Recognition application.
 import cv2
 import os
 
+# Project root (the directory containing this package). Data and model paths are
+# anchored to it so the app runs regardless of the current working directory.
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 # Load environment variables with defaults
 def get_env(key, default):
@@ -22,8 +26,8 @@ DETECTION_CONFIDENCE = float(get_env("GESTURE_DETECTION_CONF", "0.7"))
 TRACKING_CONFIDENCE = float(get_env("GESTURE_TRACKING_CONF", "0.5"))
 
 # Model settings
-MODEL_PATH = get_env("GESTURE_MODEL_PATH", "models/mp_hand_gesture")
-GESTURE_NAMES_PATH = get_env("GESTURE_NAMES_PATH", "gesture.names")
+MODEL_PATH = get_env("GESTURE_MODEL_PATH", os.path.join(BASE_DIR, "models", "mp_hand_gesture"))
+GESTURE_NAMES_PATH = get_env("GESTURE_NAMES_PATH", os.path.join(BASE_DIR, "data", "gesture.names"))
 
 # Voice feedback settings
 ENABLE_VOICE_DEFAULT = get_env("GESTURE_VOICE_ENABLED", "False").lower() == "true"

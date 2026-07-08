@@ -55,32 +55,62 @@ This repository contains a Python-based application that recognizes hand gesture
    pip install -r requirements.txt
    ```
 
-3. Run the main application:
+3. Run the application:
    ```bash
-   python sign_detection.py
+   python main.py recognize
    ```
 
 ## Project Structure
 
-- `sign_detection.py` - Main application script for gesture recognition
-- `hand_tracking/HandTrackingModule.py` - Reusable module for hand detection and tracking
-- `models/mp_hand_gesture/` - Pre-trained TensorFlow model
-- `gesture.names` - List of supported gestures
-- `requirements.txt` - Required Python packages
+```
+Hand-Gesture-Recognition/
+├── main.py                          # CLI entry point (recognize / record / train / settings)
+├── requirements.txt
+├── gesture_recognition/             # application package
+│   ├── config.py                    # configuration (env-var driven)
+│   ├── app.py                       # real-time recognition app
+│   ├── recorder.py                  # record gesture samples
+│   ├── trainer.py                   # train a model on recorded samples
+│   ├── user_profile.py              # per-user settings persistence
+│   ├── tracking/
+│   │   └── hand_detector.py         # MediaPipe hand-landmark detection
+│   ├── services/
+│   │   ├── audio_manager.py         # non-blocking text-to-speech
+│   │   ├── gesture_manager.py       # model + class-name management
+│   │   ├── gesture_smoothing.py     # prediction smoothing
+│   │   ├── hand_state_monitor.py    # hand enter/exit detection
+│   │   └── performance_analyzer.py  # FPS / timing metrics
+│   └── ui/
+│       └── settings_dialog.py       # Tkinter settings dialog
+├── models/mp_hand_gesture/          # pre-trained TensorFlow model
+├── data/
+│   ├── gesture.names                # list of supported gestures
+│   └── profiles/                    # user profiles (e.g. default.json)
+├── scripts/                         # standalone / legacy demo scripts
+│   ├── sign_detection.py            # legacy single-file recognition demo
+│   ├── hand_tracking_demo.py        # minimal hand-tracking demo
+│   └── tts_demo.py                  # minimal text-to-speech demo
+└── docs/ARCHITECTURE.md             # folder-structure explanation
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a fuller explanation of the layout.
 
 ## Usage
 
 1. Launch the application:
 
    ```bash
-   python sign_detection.py
+   python main.py recognize            # real-time recognition (default)
+   python main.py record               # record new gesture samples
+   python main.py train                # train a model on recorded samples
+   python main.py settings             # open the settings dialog
    ```
 
 2. Position your hand in front of the camera
 3. Make one of the supported gestures
 4. The application will:
    - Display the recognized gesture name on screen
-   - Provide audio feedback through speech
+   - Provide audio feedback through speech (toggle with `v`)
 5. Press 'q' to exit the application
 
 ## How It Works
@@ -109,12 +139,16 @@ The system can recognize 10 different hand gestures:
 
 ## Customization
 
+Settings are driven by `gesture_recognition/config.py` (with environment-variable
+overrides) and per-user profiles under `data/profiles/`.
+
 ### Adjusting Detection Sensitivity
 
-In `sign_detection.py`, you can modify the detection confidence:
+Set the detection confidence via an environment variable (or a profile's
+`detection_confidence`):
 
-```python
-hands = mpHands.Hands(max_num_hands=1, min_detection_confidence=0.7)
+```bash
+GESTURE_DETECTION_CONF=0.5 python main.py recognize
 ```
 
 Lower values (e.g., 0.5) will make detection more sensitive but may increase false positives.
@@ -123,9 +157,11 @@ Lower values (e.g., 0.5) will make detection more sensitive but may increase fal
 
 If your webcam is not properly recognized, try changing the camera index:
 
-```python
-cap = cv2.VideoCapture(0)  # Try 0, 1, or 2
+```bash
+GESTURE_CAM_INDEX=0 python main.py recognize   # try 0, 1, or 2
 ```
+
+You can also change it persistently via the settings dialog (`python main.py settings`).
 
 ## Troubleshooting
 

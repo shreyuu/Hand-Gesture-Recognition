@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from utils.user_profile import UserProfile
+from gesture_recognition.user_profile import UserProfile
 
 
 class SettingsDialog:
