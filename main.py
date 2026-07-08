@@ -1,10 +1,10 @@
 import argparse
 import sys
-from gesture_recognition_app import GestureRecognitionApp
-from gesture_recorder import record_gesture
-from gesture_trainer import GestureTrainer
-from utils.settings_dialog import SettingsDialog
-from utils.user_profile import UserProfile
+from gesture_recognition.app import GestureRecognitionApp
+from gesture_recognition.recorder import record_gesture
+from gesture_recognition.trainer import GestureTrainer
+from gesture_recognition.ui.settings_dialog import SettingsDialog
+from gesture_recognition.user_profile import UserProfile
 
 
 def main():

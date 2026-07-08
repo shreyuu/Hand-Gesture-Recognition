@@ -1,12 +1,12 @@
-opencv-python==4.5.3.56
-mediapipe==0.8.10
-numpy==1.21.2
-tensorflow==2.7.0
+opencv-python
+mediapipe
+numpy
+tensorflow
 
-gtts==2.2.2
+gtts
 
-jupyter==1.0.0
-ipykernel==6.9.0
+jupyter
+ipykernel
 
-matplotlib==3.5.1
-pandas==1.4.0
+matplotlib
+pandas

@@ -1,6 +1,10 @@
 import os
 import json
 
+# Project root (the directory containing this package). Profiles live under
+# data/profiles so they are found regardless of the current working directory.
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 class UserProfile:
     """Manages user-specific settings and preferences"""
@@ -15,7 +19,7 @@ class UserProfile:
             "theme": "default",
         }
 
-        self.profiles_dir = "profiles"
+        self.profiles_dir = os.path.join(BASE_DIR, "data", "profiles")
         if not os.path.exists(self.profiles_dir):
             os.makedirs(self.profiles_dir)
 
