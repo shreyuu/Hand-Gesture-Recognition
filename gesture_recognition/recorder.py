@@ -12,7 +12,7 @@ def record_gesture():
         os.makedirs("recorded_gestures")
 
     # Initialize webcam and hand detector
-    cap = cv2.VideoCapture(1)  # Change as needed
+    cap = cv2.VideoCapture(0)  # Change as needed
     detector = handDetector(detectionCon=0.7, maxHands=1)
 
     # Ask for gesture name
