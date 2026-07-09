@@ -15,7 +15,7 @@ class UserProfile:
             "enable_voice": False,
             "voice_language": "en",
             "detection_confidence": 0.7,
-            "camera_index": 1,
+            "camera_index": 0,
             "theme": "default",
         }
 
