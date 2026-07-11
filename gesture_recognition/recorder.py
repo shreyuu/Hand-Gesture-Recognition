@@ -1,22 +1,42 @@
 import cv2
-import numpy as np
 import os
 import json
 import time
 from gesture_recognition.tracking.hand_detector import handDetector
+from gesture_recognition import config
+
+# Seconds between auto-saved samples while recording is active. Using a
+# timestamp check (not time.sleep) keeps the preview responsive.
+AUTO_SAMPLE_INTERVAL = 0.1
+
+# Samples are stored as raw pixel coordinates; normalization happens at
+# training/recognition time (see gesture_recognition.landmarks), so existing
+# recordings stay usable if the normalization scheme changes.
+RECORDINGS_DIR = os.path.join(config.BASE_DIR, "recorded_gestures")
 
 
 def record_gesture():
-    # Create directory for saved gestures if it doesn't exist
-    if not os.path.exists("recorded_gestures"):
-        os.makedirs("recorded_gestures")
+    os.makedirs(RECORDINGS_DIR, exist_ok=True)
 
-    # Initialize webcam and hand detector
-    cap = cv2.VideoCapture(0)  # Change as needed
-    detector = handDetector(detectionCon=0.7, maxHands=1)
+    # Initialize webcam and hand detector from config (env-var overridable)
+    cap = cv2.VideoCapture(config.CAMERA_INDEX)
+    if not cap.isOpened():
+        print(
+            f"Could not open camera index {config.CAMERA_INDEX}. "
+            "Set GESTURE_CAM_INDEX to change it."
+        )
+        return
+    detector = handDetector(
+        detectionCon=config.DETECTION_CONFIDENCE, maxHands=config.MAX_HANDS
+    )
 
     # Ask for gesture name
-    gesture_name = input("Enter the name of the gesture to record: ")
+    gesture_name = input("Enter the name of the gesture to record: ").strip()
+    if not gesture_name:
+        print("No gesture name given, aborting.")
+        cap.release()
+        return
+
     sample_count = 0
     max_samples = 100
     samples = []
@@ -24,14 +44,21 @@ def record_gesture():
     print(
         f"Recording gesture '{gesture_name}'. Press 's' to save a sample, 'q' to finish."
     )
-    print(f"Try to record the gesture in various positions and angles.")
+    print("Try to record the gesture in various positions and angles.")
 
     recording_active = False
+    last_sample_time = 0.0
+    failed_reads = 0
 
     while True:
         success, img = cap.read()
         if not success:
+            failed_reads += 1
+            if failed_reads > 50:
+                print("Camera stopped delivering frames, aborting.")
+                break
             continue
+        failed_reads = 0
 
         # Flip image horizontally
         img = cv2.flip(img, 1)
@@ -99,13 +126,19 @@ def record_gesture():
         cv2.imshow("Gesture Recorder", img)
 
         # Auto-save if recording is active and hand is detected
-        if recording_active and lmList and sample_count < max_samples:
+        now = time.time()
+        if (
+            recording_active
+            and lmList
+            and sample_count < max_samples
+            and (now - last_sample_time) >= AUTO_SAMPLE_INTERVAL
+        ):
             # Get landmarks in format [x, y]
             landmarks = [[lm[1], lm[2]] for lm in lmList]
             samples.append(landmarks)
             sample_count += 1
+            last_sample_time = now
             print(f"Sample {sample_count} recorded")
-            time.sleep(0.1)  # Small delay between samples
 
             if sample_count >= max_samples:
                 print("Maximum number of samples reached!")
@@ -126,8 +159,8 @@ def record_gesture():
 
     # Save recorded samples
     if samples:
-        filename = (
-            f"recorded_gestures/{gesture_name}_{time.strftime('%Y%m%d_%H%M%S')}.json"
+        filename = os.path.join(
+            RECORDINGS_DIR, f"{gesture_name}_{time.strftime('%Y%m%d_%H%M%S')}.json"
         )
         with open(filename, "w") as f:
             json.dump(samples, f)

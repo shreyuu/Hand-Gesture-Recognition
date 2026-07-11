@@ -36,9 +36,9 @@ This repository contains a Python-based application that recognizes hand gesture
 
 ### Prerequisites
 
-- Python 3.7+ installed on your system
+- Python 3.9–3.11 installed on your system (required by TensorFlow 2.15)
 - Webcam access
-- Internet connection (for initial model download)
+- Internet connection (for voice feedback via gTTS)
 
 ### Installation
 
@@ -65,10 +65,13 @@ This repository contains a Python-based application that recognizes hand gesture
 ```
 Hand-Gesture-Recognition/
 ├── main.py                          # CLI entry point (recognize / record / train / settings)
-├── requirements.txt
+├── requirements.txt                 # runtime dependencies
+├── requirements-dev.txt             # + test/lint tooling
 ├── gesture_recognition/             # application package
 │   ├── config.py                    # configuration (env-var driven)
 │   ├── app.py                       # real-time recognition app
+│   ├── landmarks.py                 # landmark normalization
+│   ├── dataset.py                   # loading of recorded samples
 │   ├── recorder.py                  # record gesture samples
 │   ├── trainer.py                   # train a model on recorded samples
 │   ├── user_profile.py              # per-user settings persistence
@@ -78,7 +81,6 @@ Hand-Gesture-Recognition/
 │   │   ├── audio_manager.py         # non-blocking text-to-speech
 │   │   ├── gesture_manager.py       # model + class-name management
 │   │   ├── gesture_smoothing.py     # prediction smoothing
-│   │   ├── hand_state_monitor.py    # hand enter/exit detection
 │   │   └── performance_analyzer.py  # FPS / timing metrics
 │   └── ui/
 │       └── settings_dialog.py       # Tkinter settings dialog
@@ -90,6 +92,7 @@ Hand-Gesture-Recognition/
 │   ├── sign_detection.py            # legacy single-file recognition demo
 │   ├── hand_tracking_demo.py        # minimal hand-tracking demo
 │   └── tts_demo.py                  # minimal text-to-speech demo
+├── tests/                           # unit tests (pytest)
 └── docs/ARCHITECTURE.md             # folder-structure explanation
 ```
 
@@ -112,6 +115,20 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a fuller explanation of the
    - Display the recognized gesture name on screen
    - Provide audio feedback through speech (toggle with `v`)
 5. Press 'q' to exit the application
+
+### Training your own gestures
+
+```bash
+python main.py record                    # record samples for each gesture
+python main.py train                     # train a model on all recordings
+python main.py recognize --model custom  # recognize with your trained model
+```
+
+Recordings are stored as raw pixel coordinates under `recorded_gestures/`;
+training and custom-model recognition normalize them (wrist-relative,
+scale-invariant), so recognition doesn't depend on where the hand is in the
+frame. If you trained a model before this normalization existed, retrain it
+with `python main.py train`.
 
 ## How It Works
 

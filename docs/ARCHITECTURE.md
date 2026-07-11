@@ -23,11 +23,13 @@ unambiguous (`from gesture_recognition.services.audio_manager import AudioManage
 |------|----------------|
 | `config.py` | Central configuration. All values are environment-variable driven with sensible defaults. Paths are anchored to the project root via `BASE_DIR`. |
 | `app.py` | `GestureRecognitionApp` — the real-time recognition loop (camera → detection → prediction → smoothing → UI/voice). |
-| `recorder.py` | Records labelled gesture samples to `recorded_gestures/`. |
-| `trainer.py` | `GestureTrainer` — trains an LSTM model from recorded samples. |
+| `landmarks.py` | Landmark normalization (wrist-relative, scale-invariant) shared by trainer and recognizer. |
+| `dataset.py` | Loads recorded samples from disk. Kept TensorFlow-free so it is unit-testable with light dependencies. |
+| `recorder.py` | Records labelled gesture samples (raw pixel coordinates) to `recorded_gestures/`. |
+| `trainer.py` | `GestureTrainer` — trains a dense classifier on normalized recorded samples. |
 | `user_profile.py` | `UserProfile` — loads/saves per-user settings under `data/profiles/`. |
 | `tracking/` | Hand tracking. `hand_detector.py` wraps MediaPipe (`handDetector`). |
-| `services/` | Supporting, single-responsibility services: audio (TTS), gesture data/model management, prediction smoothing, hand enter/exit monitoring, performance metrics. |
+| `services/` | Supporting, single-responsibility services: audio (TTS), gesture data/model management, prediction smoothing, performance metrics. |
 | `ui/` | User-facing UI. `settings_dialog.py` is the Tkinter settings window. |
 
 ### Separation of concerns

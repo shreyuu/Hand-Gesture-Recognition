@@ -10,16 +10,21 @@ class handDetector():
         self.modelComplex = modelComplexity
         self.detectionCon = detectionCon
         self.trackCon = trackCon
+        self.results = None
 
         self.mpHands = mp.solutions.hands
-        self.hands = self.mpHands.Hands(self.mode, self.maxHands, self.modelComplex, 
-                                        self.detectionCon, self.trackCon)
+        self.hands = self.mpHands.Hands(
+            static_image_mode=self.mode,
+            max_num_hands=self.maxHands,
+            model_complexity=self.modelComplex,
+            min_detection_confidence=self.detectionCon,
+            min_tracking_confidence=self.trackCon,
+        )
         self.mpDraw = mp.solutions.drawing_utils
-        
-    def findHands(self,img, draw = True):
+
+    def findHands(self, img, draw=True):
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
-        # print(results.multi_hand_landmarks)
 
         if self.results.multi_hand_landmarks:
             for handLms in self.results.multi_hand_landmarks:
@@ -27,27 +32,31 @@ class handDetector():
                     self.mpDraw.draw_landmarks(img, handLms, self.mpHands.HAND_CONNECTIONS)
         return img
 
-    def findPosition(self, img, handNo = 0, draw = True):
-
+    def findPosition(self, img, handNo=0, draw=True):
         lmlist = []
-        if self.results.multi_hand_landmarks:
-            myHand = self.results.multi_hand_landmarks[handNo]
-            for id, lm in enumerate(myHand.landmark):
-                h, w, c = img.shape
-                cx, cy = int(lm.x * w), int(lm.y * h)
-                lmlist.append([id, cx, cy])
-                if draw:
-                    cv2.circle(img, (cx, cy), 7, (255, 0, 255), cv2.FILLED)
+        # No detection results yet (findHands not called, or no frame processed)
+        if self.results is None or not self.results.multi_hand_landmarks:
+            return lmlist
+
+        myHand = self.results.multi_hand_landmarks[handNo]
+        h, w, _ = img.shape
+        for id, lm in enumerate(myHand.landmark):
+            cx, cy = int(lm.x * w), int(lm.y * h)
+            lmlist.append([id, cx, cy])
+            if draw:
+                cv2.circle(img, (cx, cy), 7, (255, 0, 255), cv2.FILLED)
         return lmlist
+
 
 def main():
     pTime = 0
-    cTime = 0
     cap = cv2.VideoCapture(0)
     detector = handDetector()
 
     while True:
         success, img = cap.read()
+        if not success:
+            continue
         img = detector.findHands(img)
         lmlist = detector.findPosition(img)
         if len(lmlist) != 0:

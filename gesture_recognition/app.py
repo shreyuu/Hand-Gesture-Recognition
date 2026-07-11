@@ -1,40 +1,37 @@
 import cv2
-import numpy as np
-import tensorflow as tf
-from keras.models import load_model
-import time
 from gesture_recognition.tracking.hand_detector import handDetector
+from gesture_recognition.landmarks import normalize_landmarks
+from gesture_recognition.services.gesture_manager import GestureManager
 from gesture_recognition.services.gesture_smoothing import GestureSmoother
 from gesture_recognition.services.audio_manager import AudioManager
 from gesture_recognition.services.performance_analyzer import PerformanceAnalyzer
 from gesture_recognition import config
 
+# After this many consecutive frames without a hand, the last announced
+# gesture is forgotten so it gets re-announced when the hand comes back.
+HAND_ABSENT_RESET_FRAMES = 30
+
 
 class GestureRecognitionApp:
-    def __init__(self, profile=None):
+    def __init__(self, profile=None, model_path=None, names_path=None, normalize=False):
         # Profile settings override config defaults when present
         self.profile = profile
 
         def setting(name, default):
             return profile.get(name, default) if profile is not None else default
 
-        # Load the model
-        self.model = load_model(config.MODEL_PATH)
-
-        # Load class names (ignore blank lines from trailing newlines)
-        with open(config.GESTURE_NAMES_PATH, "r") as f:
-            self.classNames = [line.strip() for line in f if line.strip()]
+        # Model + class names. `normalize` must match how the model was
+        # trained: the bundled pretrained model expects raw pixel coordinates,
+        # models trained by GestureTrainer expect normalized landmarks.
+        self.gesture_manager = GestureManager(
+            model_path or config.MODEL_PATH,
+            names_path or config.GESTURE_NAMES_PATH,
+        )
+        self.normalize = normalize
 
         # Initialize the camera
-        camera_index = setting("camera_index", config.CAMERA_INDEX)
-        self.cap = cv2.VideoCapture(camera_index)
-        self.cap.set(3, config.CAMERA_WIDTH)
-        self.cap.set(4, config.CAMERA_HEIGHT)
-        if not self.cap.isOpened():
-            raise RuntimeError(
-                f"Could not open camera index {camera_index}. "
-                "Set GESTURE_CAM_INDEX or the profile's camera_index."
-            )
+        self.camera_index = setting("camera_index", config.CAMERA_INDEX)
+        self.cap = self._open_camera()
 
         # Initialize hand detector
         self.detector = handDetector(
@@ -59,7 +56,18 @@ class GestureRecognitionApp:
         # Add performance analyzer
         self.perf_analyzer = PerformanceAnalyzer()
 
-        print(f"Loaded {len(self.classNames)} gestures: {', '.join(self.classNames)}")
+        self.no_hand_frames = 0
+
+    def _open_camera(self):
+        cap = cv2.VideoCapture(self.camera_index)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAMERA_WIDTH)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
+        if not cap.isOpened():
+            raise RuntimeError(
+                f"Could not open camera index {self.camera_index}. "
+                "Set GESTURE_CAM_INDEX or the profile's camera_index."
+            )
+        return cap
 
     def speak_gesture(self, gesture_name):
         """Generate and play audio for a gesture using the audio manager"""
@@ -94,14 +102,15 @@ class GestureRecognitionApp:
 
             # Process hand if detected
             if lmList:
+                self.no_hand_frames = 0
+
                 # Convert landmarks to format expected by model
                 landmarks = [[lm[1], lm[2]] for lm in lmList]
+                if self.normalize:
+                    landmarks = normalize_landmarks(landmarks)
 
                 # Predict gesture
-                prediction = self.model.predict([landmarks], verbose=0)
-                classID = np.argmax(prediction)
-                className = self.classNames[classID]
-                confidence = float(prediction[0][classID])
+                className, confidence = self.gesture_manager.predict_gesture(landmarks)
 
                 # Update gesture history
                 self.smoother.update(className, confidence)
@@ -121,6 +130,11 @@ class GestureRecognitionApp:
                     config.FONT_COLOR,
                     config.FONT_THICKNESS,
                 )
+            else:
+                # Re-announce the gesture if the hand left and came back
+                self.no_hand_frames += 1
+                if self.no_hand_frames == HAND_ABSENT_RESET_FRAMES:
+                    self.audio_manager.reset_last_spoken()
 
             # Display UI elements
             self.draw_ui(frame)
@@ -144,12 +158,16 @@ class GestureRecognitionApp:
                     f"Voice feedback {'enabled' if self.enable_voice else 'disabled'}"
                 )
             elif key == ord("r"):
-                # Pause the app and start recording mode
+                # Pause the app and start recording mode. Release the camera
+                # first — the recorder opens it itself, and most platforms
+                # can't open the same camera twice.
                 cv2.destroyWindow("Hand Gesture Recognition")
+                self.cap.release()
                 from gesture_recognition.recorder import record_gesture
 
                 record_gesture()
                 # Resume the app when recording is done
+                self.cap = self._open_camera()
 
     def draw_ui(self, frame):
         """Draw UI elements on the frame"""
@@ -169,7 +187,7 @@ class GestureRecognitionApp:
         # Instructions
         cv2.putText(
             frame,
-            "Press 'v' to toggle voice, 'q' to quit",
+            "Press 'v' to toggle voice, 'r' to record, 'q' to quit",
             (10, frame.shape[0] - 30),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
