@@ -1,5 +1,3 @@
-import os
-import json
 import numpy as np
 from keras.models import load_model
 
@@ -16,19 +14,24 @@ class GestureManager:
 
     def load_resources(self):
         """Load model and class names"""
-        # Load the model
         self.model = load_model(self.model_path)
 
-        # Load class names
+        # Load class names (ignore blank lines from trailing newlines)
         with open(self.names_path, "r") as f:
-            self.class_names = f.read().split("\n")
+            self.class_names = [line.strip() for line in f if line.strip()]
 
         print(f"Loaded {len(self.class_names)} gestures: {', '.join(self.class_names)}")
 
     def predict_gesture(self, landmarks):
-        """Predict gesture from landmarks"""
-        prediction = self.model.predict([landmarks], verbose=0)
-        class_id = np.argmax(prediction)
+        """Predict gesture from landmarks.
+
+        Calls the model directly instead of ``model.predict()`` — for
+        single-sample, per-frame inference the ``predict()`` machinery adds
+        significant overhead.
+        """
+        inputs = np.asarray([landmarks], dtype=np.float32)
+        prediction = np.asarray(self.model(inputs, training=False))
+        class_id = int(np.argmax(prediction[0]))
         class_name = self.class_names[class_id]
         confidence = float(prediction[0][class_id])
 

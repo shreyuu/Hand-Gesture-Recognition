@@ -30,3 +30,5 @@ tempCodeRunnerFile.py
 *.mp3
 .venv
 .DS_Store
+recorded_gestures/
+logs/

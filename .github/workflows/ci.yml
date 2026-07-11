@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The unit tests only cover the TensorFlow-free modules (dataset,
+      # landmarks, smoothing), so CI stays fast by not installing the full
+      # ML stack.
+      - name: Install test dependencies
+        run: pip install numpy pytest ruff
+
+      - name: Lint
+        run: ruff check gesture_recognition main.py tests
+
+      - name: Test
+        run: pytest tests -v

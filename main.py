@@ -1,6 +1,8 @@
 import argparse
+import os
 import sys
 from gesture_recognition.app import GestureRecognitionApp
+from gesture_recognition.config import BASE_DIR
 from gesture_recognition.recorder import record_gesture
 from gesture_recognition.trainer import GestureTrainer
 from gesture_recognition.ui.settings_dialog import SettingsDialog
@@ -20,6 +22,13 @@ def main():
     )
     recognize_parser.add_argument(
         "--profile", type=str, default="default", help="User profile to load"
+    )
+    recognize_parser.add_argument(
+        "--model",
+        choices=["pretrained", "custom"],
+        default="pretrained",
+        help="Which model to use: the bundled pretrained model or the one "
+        "trained with 'train' (models/custom_model)",
     )
 
     # Recording mode
@@ -73,7 +82,19 @@ def main():
         dialog.show()
     else:  # Default to recognize mode
         profile = UserProfile(getattr(args, "profile", "default"))
-        app = GestureRecognitionApp(profile=profile)
+        if getattr(args, "model", "pretrained") == "custom":
+            # Custom models are trained on normalized landmarks (see
+            # GestureTrainer), so recognition must normalize too.
+            model_path = os.path.join(BASE_DIR, "models", "custom_model")
+            names_path = f"{model_path}_gestures.txt"
+            app = GestureRecognitionApp(
+                profile=profile,
+                model_path=model_path,
+                names_path=names_path,
+                normalize=True,
+            )
+        else:
+            app = GestureRecognitionApp(profile=profile)
         app.run()
 
 
