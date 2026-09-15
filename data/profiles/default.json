@@ -2,6 +2,5 @@
   "enable_voice": false,
   "voice_language": "en",
   "detection_confidence": 0.7,
-  "camera_index": 0,
-  "theme": "default"
+  "camera_index": 0
 }

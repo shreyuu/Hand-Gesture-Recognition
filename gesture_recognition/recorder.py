@@ -171,7 +171,3 @@ def record_gesture():
     # Release resources
     cap.release()
     cv2.destroyAllWindows()
-
-
-if __name__ == "__main__":
-    record_gesture()

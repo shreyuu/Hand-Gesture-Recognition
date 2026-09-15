@@ -195,8 +195,3 @@ class GestureRecognitionApp:
             1,
             cv2.LINE_AA,
         )
-
-
-if __name__ == "__main__":
-    app = GestureRecognitionApp()
-    app.run()

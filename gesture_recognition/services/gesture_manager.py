@@ -36,13 +36,3 @@ class GestureManager:
         confidence = float(prediction[0][class_id])
 
         return class_name, confidence
-
-    def add_gesture(self, name):
-        """Add a new gesture to the class names file"""
-        if name not in self.class_names:
-            self.class_names.append(name)
-            with open(self.names_path, "w") as f:
-                f.write("\n".join(self.class_names))
-            print(f"Added new gesture: {name}")
-            return True
-        return False
