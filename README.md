@@ -88,10 +88,6 @@ Hand-Gesture-Recognition/
 ├── data/
 │   ├── gesture.names                # list of supported gestures
 │   └── profiles/                    # user profiles (e.g. default.json)
-├── scripts/                         # standalone / legacy demo scripts
-│   ├── sign_detection.py            # legacy single-file recognition demo
-│   ├── hand_tracking_demo.py        # minimal hand-tracking demo
-│   └── tts_demo.py                  # minimal text-to-speech demo
 ├── tests/                           # unit tests (pytest)
 └── docs/ARCHITECTURE.md             # folder-structure explanation
 ```

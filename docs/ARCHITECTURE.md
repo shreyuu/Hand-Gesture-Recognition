@@ -10,7 +10,6 @@ Hand-Gesture-Recognition/
 ├── gesture_recognition/     # The application package (all importable source lives here).
 ├── models/                  # Pre-trained TensorFlow model artifacts.
 ├── data/                    # Committed input data + user profiles.
-├── scripts/                 # Standalone / legacy demo scripts, not imported by the app.
 └── docs/                    # Documentation.
 ```
 
@@ -52,14 +51,21 @@ Committed, non-code inputs:
 - `gesture.names` — the list of recognised gesture labels (override with `GESTURE_NAMES_PATH`).
 - `profiles/` — per-user JSON settings (e.g. `default.json`).
 
-## `scripts/`
+## Legacy demo scripts
 
-Standalone scripts that are **not** part of the application package:
-- `sign_detection.py` — the original single-file recognition demo (superseded by
-  `main.py recognize`, kept for reference). Adds the project root to `sys.path` so
-  it can reuse the package when run directly.
-- `hand_tracking_demo.py` — minimal MediaPipe hand-tracking demo.
-- `tts_demo.py` — minimal gTTS text-to-speech demo.
+The repository previously carried a `scripts/` directory holding a single-file
+recognition demo plus minimal MediaPipe and gTTS examples. They were removed:
+each duplicated logic the package already owns, and all three had drifted out of
+sync with it (the recognition demo hard-coded a camera index and used the slow
+`model.predict()` path that `services/gesture_manager.py` deliberately avoids).
+
+They remain in history if ever needed for reference:
+
+```bash
+git show 77b6f14:scripts/sign_detection.py
+git show 77b6f14:scripts/hand_tracking_demo.py
+git show 77b6f14:scripts/tts_demo.py
+```
 
 ## Conventions
 
