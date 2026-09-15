@@ -1,9 +1,7 @@
 import os
 import json
 
-# Project root (the directory containing this package). Profiles live under
-# data/profiles so they are found regardless of the current working directory.
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from gesture_recognition.config import BASE_DIR
 
 
 class UserProfile:
@@ -16,7 +14,6 @@ class UserProfile:
             "voice_language": "en",
             "detection_confidence": 0.7,
             "camera_index": 0,
-            "theme": "default",
         }
 
         self.profiles_dir = os.path.join(BASE_DIR, "data", "profiles")

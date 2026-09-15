@@ -70,7 +70,8 @@ git show 77b6f14:scripts/tts_demo.py
 ## Conventions
 
 - **Naming:** `snake_case` for modules and packages.
-- **Paths:** never rely on the current working directory — `config.py` and
-  `user_profile.py` anchor paths to the project root so the app runs from anywhere.
+- **Paths:** never rely on the current working directory — `config.py` defines
+  `BASE_DIR` (the project root) and every other module derives its paths from it,
+  so the app runs from anywhere.
 - **Configuration:** prefer environment variables (see `config.py`) and profiles
   over hard-coded constants.

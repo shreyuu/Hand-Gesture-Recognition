@@ -8,7 +8,6 @@ class GestureSmoother:
 
     def __init__(self, history_length=10, confidence_threshold=0.5, dominance=0.4):
         self.history = deque(maxlen=history_length)
-        self.history_length = history_length
         self.confidence_threshold = confidence_threshold
         self.dominance = dominance
 
