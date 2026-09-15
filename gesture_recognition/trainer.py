@@ -120,8 +120,3 @@ class GestureTrainer:
 
         print(f"Model saved to {self.model_path}")
         return True
-
-
-if __name__ == "__main__":
-    trainer = GestureTrainer()
-    trainer.train()
