@@ -124,6 +124,12 @@ python main.py train                     # train a model on all recordings
 python main.py recognize --model custom  # recognize with your trained model
 ```
 
+No custom model ships with this repository — `--model custom` reads
+`models/custom_model/`, which only exists after you run `python main.py train`.
+Record **at least two distinct gestures** before training: a model trained on a
+single label has a one-class softmax and will report that label at 1.00
+confidence for every hand it sees.
+
 Recordings are stored as raw pixel coordinates under `recorded_gestures/`;
 training and custom-model recognition normalize them (wrist-relative,
 scale-invariant), so recognition doesn't depend on where the hand is in the

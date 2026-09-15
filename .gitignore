@@ -1,5 +1,5 @@
+# Python
 __pycache__/
-.DS_Store
 *.pyc
 *.pyo
 *.pyd
@@ -7,6 +7,26 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.venv
+
+# Tooling caches
+*.coverage
+*.cache
+*.mypy_cache/
+*.pytest_cache/
+.ruff_cache/
+*.tox/
+
+# Editors / OS
+.DS_Store
+.idea/
+*.vscode/
+.serena/
+tempCodeRunnerFile.py
+*.ipynb
+*.ipynb_checkpoints/
+
+# Local scratch
 .env
 *.log
 *.sqlite3
@@ -15,20 +35,11 @@ build/
 *.bak
 *.tmp
 *.pid
-*.coverage
-*.cache
-*.mypy_cache/
-*.pytest_cache/
-*.tox/
-*.vscode/
-.idea/
-*.ipynb_checkpoints/
-*.ipynb
-gesture.mp3
-output_audio.mp3
-tempCodeRunnerFile.py
+
+# Generated audio (AudioManager writes to the system temp dir; these are strays)
 *.mp3
-.venv
-.DS_Store
+
+# Training inputs and outputs — reproducible via `python main.py record` / `train`
 recorded_gestures/
 logs/
+models/custom_model*
