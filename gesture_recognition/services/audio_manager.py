@@ -9,6 +9,7 @@ import time
 from collections import defaultdict
 
 from gtts import gTTS
+from gtts.tts import gTTSError
 
 
 class AudioManager:
@@ -92,7 +93,7 @@ class AudioManager:
                 # hashlib (not hash()) so the filename is stable across runs
                 # and cached files survive restarts.
                 digest = hashlib.md5(
-                    f"{text}|{lang}|{slow}".encode("utf-8")
+                    f"{text}|{lang}|{slow}".encode()
                 ).hexdigest()
                 audio_path = os.path.join(self.temp_dir, f"gesture_{digest}.mp3")
 
@@ -100,7 +101,10 @@ class AudioManager:
                     try:
                         tts = gTTS(text=text, lang=lang, slow=slow)
                         tts.save(audio_path)
-                    except Exception as e:
+                    # gTTSError: API/network failure; OSError: writing the
+                    # MP3; ValueError: unsupported language code (the
+                    # settings dialog lets users type any value).
+                    except (gTTSError, OSError, ValueError) as e:
                         print(f"Text-to-speech failed for '{text}': {e}")
                         return
 

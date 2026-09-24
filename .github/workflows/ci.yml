@@ -16,9 +16,10 @@ jobs:
 
       # The unit tests only cover the TensorFlow-free modules (dataset,
       # landmarks, smoothing), so CI stays fast by not installing the full
-      # ML stack.
+      # ML stack. Ruff is pinned (keep in sync with requirements-dev.txt)
+      # because new Ruff releases can enable extra lint rules by default.
       - name: Install test dependencies
-        run: pip install numpy pytest ruff
+        run: pip install numpy pytest ruff==0.16.8
 
       - name: Lint
         run: ruff check gesture_recognition main.py tests

@@ -2,8 +2,9 @@
 Configuration settings for the Hand Gesture Recognition application.
 """
 
-import cv2
 import os
+
+import cv2
 
 # Project root (the directory containing this package). Data and model paths are
 # anchored to it so the app runs regardless of the current working directory.

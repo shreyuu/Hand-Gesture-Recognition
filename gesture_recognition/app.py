@@ -1,11 +1,12 @@
 import cv2
-from gesture_recognition.tracking.hand_detector import handDetector
+
+from gesture_recognition import config
 from gesture_recognition.landmarks import normalize_landmarks
+from gesture_recognition.services.audio_manager import AudioManager
 from gesture_recognition.services.gesture_manager import GestureManager
 from gesture_recognition.services.gesture_smoothing import GestureSmoother
-from gesture_recognition.services.audio_manager import AudioManager
 from gesture_recognition.services.performance_analyzer import PerformanceAnalyzer
-from gesture_recognition import config
+from gesture_recognition.tracking.hand_detector import handDetector
 
 # After this many consecutive frames without a hand, the last announced
 # gesture is forgotten so it gets re-announced when the hand comes back.

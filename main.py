@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+
 from gesture_recognition.app import GestureRecognitionApp
 from gesture_recognition.config import BASE_DIR
 from gesture_recognition.recorder import record_gesture
