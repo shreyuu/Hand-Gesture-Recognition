@@ -34,7 +34,10 @@ def main():
     # Recording mode
     record_parser = subparsers.add_parser("record", help="Record gesture data")
     record_parser.add_argument(
-        "--gesture", type=str, help="Name of the gesture to record"
+        "--gesture", type=str, help="Name of the gesture to record (prompted if omitted)"
+    )
+    record_parser.add_argument(
+        "--profile", type=str, default="default", help="User profile to load"
     )
 
     # Training mode
@@ -69,7 +72,10 @@ def main():
 
     # Handle different modes
     if mode == "record":
-        record_gesture()
+        record_gesture(
+            gesture_name=getattr(args, "gesture", None),
+            profile=UserProfile(getattr(args, "profile", "default")),
+        )
     elif mode == "train":
         trainer = GestureTrainer()
         trainer.train(

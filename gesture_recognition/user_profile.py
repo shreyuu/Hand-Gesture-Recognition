@@ -9,12 +9,9 @@ class UserProfile:
 
     def __init__(self, profile_name="default"):
         self.profile_name = profile_name
-        self.settings = {
-            "enable_voice": False,
-            "voice_language": "en",
-            "detection_confidence": 0.7,
-            "camera_index": 0,
-        }
+        # Only settings the user actually saved. Missing keys fall back to
+        # env vars / defaults via config.resolve_setting().
+        self.settings = {}
 
         self.profiles_dir = os.path.join(BASE_DIR, "data", "profiles")
         if not os.path.exists(self.profiles_dir):

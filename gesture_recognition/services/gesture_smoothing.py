@@ -19,6 +19,10 @@ class GestureSmoother:
         if confidence >= self.confidence_threshold:
             self.history.append(gesture_name)
 
+    def reset(self):
+        """Forget all past predictions (e.g. when the hand leaves the frame)"""
+        self.history.clear()
+
     def get_dominant_gesture(self):
         """
         Return the most frequent gesture in the history, but only if it is

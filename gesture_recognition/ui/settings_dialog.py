@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from gesture_recognition.config import resolve_setting
 from gesture_recognition.user_profile import UserProfile
 
 
@@ -26,7 +27,7 @@ class SettingsDialog:
         camera_frame.pack(fill=tk.X, pady=5)
 
         ttk.Label(camera_frame, text="Camera Index:").grid(column=0, row=0, sticky=tk.W)
-        self.camera_var = tk.IntVar(value=self.profile.get("camera_index", 0))
+        self.camera_var = tk.IntVar(value=resolve_setting("camera_index", self.profile))
         ttk.Spinbox(
             camera_frame, from_=0, to=10, textvariable=self.camera_var, width=5
         ).grid(column=1, row=0, padx=5)
@@ -41,7 +42,7 @@ class SettingsDialog:
             column=0, row=0, sticky=tk.W
         )
         self.confidence_var = tk.DoubleVar(
-            value=self.profile.get("detection_confidence", 0.7)
+            value=resolve_setting("detection_confidence", self.profile)
         )
         confidence_scale = ttk.Scale(
             detect_frame,
@@ -58,7 +59,7 @@ class SettingsDialog:
         voice_frame.pack(fill=tk.X, pady=5)
 
         self.voice_enabled = tk.BooleanVar(
-            value=self.profile.get("enable_voice", False)
+            value=resolve_setting("enable_voice", self.profile)
         )
         ttk.Checkbutton(
             voice_frame, text="Enable Voice", variable=self.voice_enabled
@@ -67,7 +68,7 @@ class SettingsDialog:
         ttk.Label(voice_frame, text="Language:").grid(
             column=0, row=1, sticky=tk.W, pady=5
         )
-        self.language_var = tk.StringVar(value=self.profile.get("voice_language", "en"))
+        self.language_var = tk.StringVar(value=resolve_setting("voice_language", self.profile))
         languages = ["en", "es", "fr", "de", "it", "ja", "ko", "zh-CN"]
         language_combo = ttk.Combobox(
             voice_frame, textvariable=self.language_var, values=languages

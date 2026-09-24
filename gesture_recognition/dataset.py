@@ -6,12 +6,23 @@ without installing the heavy ML dependencies.
 
 import json
 import os
+import re
 
 from gesture_recognition.landmarks import normalize_landmarks
 
 # Recordings are saved as <gesture_name>_<YYYYmmdd>_<HHMMSS>.json, so the
 # timestamp is always the last two underscore-separated parts.
 TIMESTAMP_PARTS = 2
+
+
+def safe_gesture_name(name):
+    """Make a user-entered gesture name safe to use in a filename.
+
+    Letters, digits, spaces, ``_`` and ``-`` are kept; anything else (path
+    separators, ``..``, etc.) becomes ``_``. Returns ``""`` if nothing usable
+    is left.
+    """
+    return re.sub(r"[^\w\- ]", "_", name.strip()).strip(" _")
 
 
 def gesture_name_from_filename(filename):

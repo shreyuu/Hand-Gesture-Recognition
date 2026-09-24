@@ -14,11 +14,10 @@ HAND_ABSENT_RESET_FRAMES = 30
 
 class GestureRecognitionApp:
     def __init__(self, profile=None, model_path=None, names_path=None, normalize=False):
-        # Profile settings override config defaults when present
         self.profile = profile
 
-        def setting(name, default):
-            return profile.get(name, default) if profile is not None else default
+        def setting(name):
+            return config.resolve_setting(name, profile)
 
         # Model + class names. `normalize` must match how the model was
         # trained: the bundled pretrained model expects raw pixel coordinates,
@@ -30,19 +29,19 @@ class GestureRecognitionApp:
         self.normalize = normalize
 
         # Initialize the camera
-        self.camera_index = setting("camera_index", config.CAMERA_INDEX)
+        self.camera_index = setting("camera_index")
         self.cap = self._open_camera()
 
         # Initialize hand detector
         self.detector = handDetector(
-            detectionCon=setting("detection_confidence", config.DETECTION_CONFIDENCE),
+            detectionCon=setting("detection_confidence"),
             trackCon=config.TRACKING_CONFIDENCE,
             maxHands=config.MAX_HANDS,
         )
 
         # Voice settings
-        self.enable_voice = setting("enable_voice", config.ENABLE_VOICE_DEFAULT)
-        self.voice_language = setting("voice_language", config.VOICE_LANGUAGE)
+        self.enable_voice = setting("enable_voice")
+        self.voice_language = setting("voice_language")
         self.audio_manager = AudioManager(
             cooldown_time=config.VOICE_COOLDOWN_TIME, cache_size=config.AUDIO_CACHE_SIZE
         )
@@ -57,6 +56,7 @@ class GestureRecognitionApp:
         self.perf_analyzer = PerformanceAnalyzer()
 
         self.no_hand_frames = 0
+        self.failed_reads = 0
 
     def _open_camera(self):
         cap = cv2.VideoCapture(self.camera_index)
@@ -90,8 +90,12 @@ class GestureRecognitionApp:
             # Read frame
             success, frame = self.cap.read()
             if not success:
-                print("Failed to capture image")
+                self.failed_reads += 1
+                if self.failed_reads > config.MAX_FAILED_READS:
+                    print("Camera stopped delivering frames, exiting.")
+                    break
                 continue
+            self.failed_reads = 0
 
             # Flip frame horizontally
             frame = cv2.flip(frame, 1)
@@ -120,10 +124,16 @@ class GestureRecognitionApp:
                 if smooth_gesture:
                     self.speak_gesture(smooth_gesture)
 
-                # Display prediction
+                # Display prediction. The raw confidence belongs to this
+                # frame's class, so only show it when it matches the
+                # smoothed gesture.
+                if smooth_gesture == className:
+                    label = f"{smooth_gesture} ({confidence:.2f})"
+                else:
+                    label = smooth_gesture
                 cv2.putText(
                     frame,
-                    f"{smooth_gesture} ({confidence:.2f})",
+                    label,
                     (10, 50),
                     config.FONT,
                     config.FONT_SCALE,
@@ -131,10 +141,13 @@ class GestureRecognitionApp:
                     config.FONT_THICKNESS,
                 )
             else:
-                # Re-announce the gesture if the hand left and came back
+                # Re-announce the gesture if the hand left and came back.
+                # Clear the smoother too, or its stale history would make the
+                # old gesture win (and be re-announced) when the hand returns.
                 self.no_hand_frames += 1
                 if self.no_hand_frames == HAND_ABSENT_RESET_FRAMES:
                     self.audio_manager.reset_last_spoken()
+                    self.smoother.reset()
 
             # Display UI elements
             self.draw_ui(frame)
@@ -165,7 +178,7 @@ class GestureRecognitionApp:
                 self.cap.release()
                 from gesture_recognition.recorder import record_gesture
 
-                record_gesture()
+                record_gesture(profile=self.profile)
                 # Resume the app when recording is done
                 self.cap = self._open_camera()
 
