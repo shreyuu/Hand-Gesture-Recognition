@@ -26,6 +26,15 @@ def test_no_dominant_gesture_when_flickering():
     assert smoother.get_dominant_gesture() == ""
 
 
+def test_reset_forgets_previous_gesture():
+    smoother = GestureSmoother(history_length=15, dominance=0.4)
+    for _ in range(15):
+        smoother.update("peace", 0.9)
+    smoother.reset()
+    smoother.update("fist", 0.9)
+    assert smoother.get_dominant_gesture() == "fist"
+
+
 def test_history_length_limits_memory():
     smoother = GestureSmoother(history_length=3, dominance=0.5)
     for _ in range(10):

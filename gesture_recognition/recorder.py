@@ -3,6 +3,7 @@ import os
 import json
 import time
 from gesture_recognition.tracking.hand_detector import handDetector
+from gesture_recognition.dataset import safe_gesture_name
 from gesture_recognition import config
 
 # Seconds between auto-saved samples while recording is active. Using a
@@ -15,27 +16,34 @@ AUTO_SAMPLE_INTERVAL = 0.1
 RECORDINGS_DIR = os.path.join(config.BASE_DIR, "recorded_gestures")
 
 
-def record_gesture():
+def record_gesture(gesture_name=None, profile=None):
+    """Record samples of one gesture.
+
+    ``gesture_name`` is prompted for when not given. ``profile`` supplies the
+    camera and detection settings, so recording started from the recognizer
+    uses the same camera the recognizer was using.
+    """
+    if gesture_name is None:
+        gesture_name = input("Enter the name of the gesture to record: ")
+    gesture_name = safe_gesture_name(gesture_name)
+    if not gesture_name:
+        print("No valid gesture name given, aborting.")
+        return
+
     os.makedirs(RECORDINGS_DIR, exist_ok=True)
 
-    # Initialize webcam and hand detector from config (env-var overridable)
-    cap = cv2.VideoCapture(config.CAMERA_INDEX)
+    camera_index = config.resolve_setting("camera_index", profile)
+    cap = cv2.VideoCapture(camera_index)
     if not cap.isOpened():
         print(
-            f"Could not open camera index {config.CAMERA_INDEX}. "
-            "Set GESTURE_CAM_INDEX to change it."
+            f"Could not open camera index {camera_index}. "
+            "Set GESTURE_CAM_INDEX or the profile's camera_index."
         )
         return
     detector = handDetector(
-        detectionCon=config.DETECTION_CONFIDENCE, maxHands=config.MAX_HANDS
+        detectionCon=config.resolve_setting("detection_confidence", profile),
+        maxHands=config.MAX_HANDS,
     )
-
-    # Ask for gesture name
-    gesture_name = input("Enter the name of the gesture to record: ").strip()
-    if not gesture_name:
-        print("No gesture name given, aborting.")
-        cap.release()
-        return
 
     sample_count = 0
     max_samples = 100
@@ -54,7 +62,7 @@ def record_gesture():
         success, img = cap.read()
         if not success:
             failed_reads += 1
-            if failed_reads > 50:
+            if failed_reads > config.MAX_FAILED_READS:
                 print("Camera stopped delivering frames, aborting.")
                 break
             continue
@@ -150,7 +158,7 @@ def record_gesture():
         elif key == ord("r"):
             recording_active = not recording_active
             print(f"Recording {'started' if recording_active else 'paused'}")
-        elif key == ord("s") and lmList:
+        elif key == ord("s") and lmList and sample_count < max_samples:
             # Manually save current frame
             landmarks = [[lm[1], lm[2]] for lm in lmList]
             samples.append(landmarks)

@@ -1,6 +1,24 @@
 import json
 
-from gesture_recognition.dataset import gesture_name_from_filename, load_samples
+from gesture_recognition.dataset import (
+    gesture_name_from_filename,
+    load_samples,
+    safe_gesture_name,
+)
+
+
+def test_safe_gesture_name_keeps_normal_names():
+    assert safe_gesture_name("  thumbs up ") == "thumbs up"
+    assert safe_gesture_name("call-me_2") == "call-me_2"
+
+
+def test_safe_gesture_name_strips_path_characters():
+    assert "/" not in safe_gesture_name("../../etc/wave")
+    assert safe_gesture_name("../../etc/wave").endswith("wave")
+
+
+def test_safe_gesture_name_rejects_empty():
+    assert safe_gesture_name("///") == ""
 
 
 def test_simple_gesture_name():
