@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+
 from gesture_recognition.config import resolve_setting
 from gesture_recognition.user_profile import UserProfile
 

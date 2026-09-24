@@ -1,5 +1,5 @@
-import os
 import json
+import os
 
 from gesture_recognition.config import BASE_DIR
 
@@ -25,11 +25,11 @@ class UserProfile:
 
         if os.path.exists(profile_path):
             try:
-                with open(profile_path, "r") as file:
+                with open(profile_path, "r", encoding="utf-8") as file:
                     loaded_settings = json.load(file)
                     self.settings.update(loaded_settings)
                 print(f"Loaded profile: {self.profile_name}")
-            except Exception as e:
+            except (OSError, json.JSONDecodeError) as e:
                 print(f"Error loading profile: {e}")
 
     def save_profile(self):
@@ -37,11 +37,11 @@ class UserProfile:
         profile_path = os.path.join(self.profiles_dir, f"{self.profile_name}.json")
 
         try:
-            with open(profile_path, "w") as file:
+            with open(profile_path, "w", encoding="utf-8") as file:
                 json.dump(self.settings, file, indent=4)
             print(f"Saved profile: {self.profile_name}")
             return True
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             print(f"Error saving profile: {e}")
             return False
 

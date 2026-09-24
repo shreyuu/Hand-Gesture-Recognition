@@ -1,10 +1,12 @@
-import cv2
-import os
 import json
+import os
 import time
-from gesture_recognition.tracking.hand_detector import handDetector
-from gesture_recognition.dataset import safe_gesture_name
+
+import cv2
+
 from gesture_recognition import config
+from gesture_recognition.dataset import safe_gesture_name
+from gesture_recognition.tracking.hand_detector import handDetector
 
 # Seconds between auto-saved samples while recording is active. Using a
 # timestamp check (not time.sleep) keeps the preview responsive.
