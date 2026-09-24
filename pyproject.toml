@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+# Put the repo root on sys.path so tests can import gesture_recognition
+# without installing it (bare `pytest` doesn't add the cwd, unlike
+# `python -m pytest`).
+pythonpath = ["."]
+testpaths = ["tests"]
