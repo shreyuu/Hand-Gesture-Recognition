@@ -1,0 +1,2 @@
+Made a webcam app that turns your hand into 21 dots, names the gesture (peace, rock, live long…), says it out loud, and learns new ones from `python main.py train`.
+MediaPipe finds the hand, TensorFlow names it. Press 'q' to quit.
