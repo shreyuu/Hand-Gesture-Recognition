@@ -1,5 +1,9 @@
 # Hand Gesture Recognition with MediaPipe and TensorFlow
 
+[![Hand Gesture Recognition demo](docs/media/demo.gif)](docs/media/demo.mp4?raw=true)
+
+_Click the GIF to open the full video with sound ([docs/media/demo.mp4](docs/media/demo.mp4?raw=true))._
+
 **Table of Contents**
 
 - [Hand Gesture Recognition with MediaPipe and TensorFlow](#hand-gesture-recognition-with-mediapipe-and-tensorflow)
@@ -89,7 +93,9 @@ Hand-Gesture-Recognition/
 │   ├── gesture.names                # list of supported gestures
 │   └── profiles/                    # user profiles (e.g. default.json)
 ├── tests/                           # unit tests (pytest)
-└── docs/ARCHITECTURE.md             # folder-structure explanation
+└── docs/
+    ├── ARCHITECTURE.md              # folder-structure explanation
+    └── media/                       # README demo (demo.gif + full demo.mp4)
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a fuller explanation of the layout.

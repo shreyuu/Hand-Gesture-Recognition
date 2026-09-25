@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Hand Gesture Recognition — brag</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="hand-data.js"></script>
+    <script src="audio-data.js"></script>
+    <style>
+      :root {
+        --bg: #0e0d10;
+        --fg: #f2eeee;
+        --red: #ff2d2d;
+        --bone: #e0e0e0;
+        --green: #39ff5a;
+        --muted: #9a939c;
+        --panel: #16151a;
+        --line: #2c2a31;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: "JetBrains Mono", monospace;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      .display {
+        font-family: "Archivo Black", sans-serif;
+        font-weight: 400;
+        letter-spacing: -0.035em;
+        line-height: 0.98;
+      }
+      .red {
+        color: var(--red);
+      }
+
+      /* ---------- background ---------- */
+      #grid {
+        position: absolute;
+        inset: -120px;
+        background-image:
+          linear-gradient(rgba(242, 238, 238, 0.07) 2px, transparent 2px),
+          linear-gradient(90deg, rgba(242, 238, 238, 0.07) 2px, transparent 2px);
+        background-size: 120px 120px;
+        -webkit-mask-image: radial-gradient(circle at 50% 36%, #000 0%, rgba(0, 0, 0, 0.35) 45%, transparent 75%);
+        mask-image: radial-gradient(circle at 50% 36%, #000 0%, rgba(0, 0, 0, 0.35) 45%, transparent 75%);
+      }
+      #glow {
+        position: absolute;
+        left: 90px;
+        top: 214px;
+        width: 900px;
+        height: 900px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 45, 45, 0.3) 0%, rgba(255, 45, 45, 0.1) 38%, rgba(255, 45, 45, 0) 68%);
+      }
+      #marks {
+        position: absolute;
+        inset: 0;
+      }
+      #footer-tag {
+        position: absolute;
+        left: 60px;
+        bottom: 120px;
+        font-size: 20px;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+      #footer-tag b {
+        color: var(--red);
+        font-weight: 700;
+      }
+
+      /* ---------- OpenCV window ---------- */
+      #win-inner {
+        position: absolute;
+        left: 60px;
+        top: 260px;
+        width: 960px;
+        height: 764px;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 2px solid var(--line);
+        box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 45, 45, 0.06);
+        background: #101013;
+      }
+      .titlebar {
+        height: 44px;
+        display: flex;
+        align-items: center;
+        padding: 0 18px;
+        background: #1d1c21;
+        border-bottom: 2px solid var(--line);
+        position: relative;
+      }
+      .lights {
+        display: flex;
+        gap: 9px;
+      }
+      .lights i {
+        display: block;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #3a3840;
+      }
+      .lights i:nth-child(1) {
+        background: #ff5f57;
+      }
+      .lights i:nth-child(2) {
+        background: #febc2e;
+      }
+      .lights i:nth-child(3) {
+        background: #28c840;
+      }
+      .titlebar .t {
+        position: absolute;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: "Montserrat", sans-serif;
+        font-weight: 700;
+        font-size: 18px;
+        color: #c9c4cc;
+      }
+      .feed {
+        position: relative;
+        width: 960px;
+        height: 720px;
+        background:
+          radial-gradient(ellipse at 50% 45%, #2a2630 0%, #1a181d 45%, #0f0e11 100%);
+      }
+      .feed .lbl {
+        position: absolute;
+        left: 16px;
+        top: 20px;
+        font-size: 44px;
+        font-weight: 700;
+        color: var(--red);
+        opacity: 0;
+        white-space: nowrap;
+      }
+      .feed .fps {
+        position: absolute;
+        right: 40px;
+        top: 18px;
+        font-size: 26px;
+        color: var(--green);
+      }
+      .feed .voice {
+        position: absolute;
+        left: 16px;
+        bottom: 74px;
+        font-size: 24px;
+        color: #ffffff;
+      }
+      .feed .voice span {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        white-space: nowrap;
+      }
+      .feed .instr {
+        position: absolute;
+        left: 16px;
+        bottom: 28px;
+        font-size: 22px;
+        color: #ffffff;
+        white-space: nowrap;
+      }
+      #bubble {
+        position: absolute;
+        left: 600px;
+        top: 150px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 18px 26px;
+        border-radius: 22px;
+        background: var(--fg);
+        color: #141216;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 700;
+        font-size: 34px;
+        white-space: nowrap;
+        opacity: 0;
+        transform-origin: 10% 100%;
+      }
+      #bubble svg {
+        width: 40px;
+        height: 40px;
+        display: block;
+      }
+
+      /* ---------- hand rig ---------- */
+      #rig {
+        position: absolute;
+        left: 240px;
+        top: 354px;
+        width: 600px;
+        height: 621px;
+      }
+      #rig-inner {
+        width: 100%;
+        height: 100%;
+      }
+      #hand {
+        width: 100%;
+        height: 100%;
+        display: block;
+        overflow: visible;
+      }
+      #hand line {
+        stroke: var(--bone);
+        stroke-width: 0.036;
+        stroke-linecap: round;
+      }
+      #hand circle {
+        fill: var(--red);
+      }
+
+      /* ---------- right column ---------- */
+      .col {
+        position: absolute;
+        left: 60px;
+        top: 1100px;
+        width: 960px;
+        height: 560px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 34px;
+      }
+      .col h2 {
+        font-size: 80px;
+      }
+      .col .sub {
+        font-size: 30px;
+        line-height: 1.45;
+        color: var(--muted);
+        max-width: 900px;
+      }
+      .col .sub b {
+        color: var(--fg);
+        font-weight: 700;
+      }
+      #s1 .col h2 {
+        font-size: 116px;
+      }
+      #meta {
+        position: absolute;
+        left: 60px;
+        top: 150px;
+        font-size: 22px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      #meta b {
+        color: var(--fg);
+        font-weight: 700;
+      }
+      .glist {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 30px;
+        font-size: 30px;
+        color: var(--muted);
+      }
+      .glist div {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        white-space: nowrap;
+      }
+      .glist i {
+        display: block;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--red);
+        opacity: 0;
+      }
+      .keyrow {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        font-size: 30px;
+        color: var(--muted);
+      }
+      .keycap {
+        width: 112px;
+        height: 112px;
+        border-radius: 18px;
+        background: #26242b;
+        border: 3px solid #3a3740;
+        box-shadow: 0 10px 0 #0a090c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 56px;
+        font-weight: 700;
+        color: var(--fg);
+      }
+
+      /* ---------- terminal ---------- */
+      #s5 h2 {
+        position: absolute;
+        left: 60px;
+        top: 260px;
+        width: 960px;
+        font-size: 112px;
+      }
+      .term {
+        position: absolute;
+        left: 60px;
+        top: 580px;
+        width: 960px;
+        height: 540px;
+        border-radius: 14px;
+        border: 2px solid var(--line);
+        background: var(--panel);
+        overflow: hidden;
+        box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6);
+      }
+      .term .body {
+        padding: 36px 40px;
+        font-size: 27px;
+        line-height: 1.75;
+      }
+      .term .row {
+        white-space: pre;
+      }
+      .term .ps {
+        color: var(--red);
+        font-weight: 700;
+      }
+      .term .cmd {
+        display: inline-block;
+        color: var(--fg);
+      }
+      .term .out {
+        color: var(--muted);
+        white-space: pre-wrap;
+        opacity: 0;
+        margin-bottom: 14px;
+      }
+      .term .out b {
+        color: var(--green);
+        font-weight: 400;
+      }
+      .caret {
+        display: inline-block;
+        width: 16px;
+        height: 30px;
+        background: var(--red);
+        vertical-align: -6px;
+      }
+
+      /* ---------- outro ---------- */
+      #s6 h2 {
+        font-size: 112px;
+      }
+      #s6 .punch {
+        font-size: 50px;
+        font-weight: 700;
+        color: var(--red);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="22.5"
+      data-width="1080"
+      data-height="1920"
+    >
+      <!-- background: grid + audio-reactive glow + registration marks -->
+      <div id="bg" class="clip" data-start="0" data-duration="22.5" data-track-index="0">
+        <div id="grid"></div>
+        <div id="glow"></div>
+        <svg id="marks" viewBox="0 0 1080 1920">
+          <g stroke="#ff2d2d" stroke-width="3" fill="none" opacity="0.7">
+            <path d="M60 100 V60 H100" />
+            <path d="M980 60 H1020 V100" />
+            <path d="M60 1820 V1860 H100" />
+            <path d="M980 1860 H1020 V1820" />
+          </g>
+        </svg>
+        <div id="footer-tag"><b>●</b> MediaPipe Hands · 21 landmarks · TensorFlow classifier</div>
+      </div>
+
+      <!-- OpenCV window recreation -->
+      <div id="win" class="clip" data-start="2.8" data-duration="12.2" data-track-index="1">
+        <div id="win-inner">
+          <div class="titlebar">
+            <div class="lights"><i></i><i></i><i></i></div>
+            <div class="t">Hand Gesture Recognition</div>
+          </div>
+          <div class="feed">
+            <div class="lbl" id="lbl-peace">peace (0.98)</div>
+            <div class="lbl" id="lbl-thumbs">thumbs up (0.97)</div>
+            <div class="lbl" id="lbl-rock">rock (0.99)</div>
+            <div class="lbl" id="lbl-call">call me (0.95)</div>
+            <div class="lbl" id="lbl-okay">okay (0.96)</div>
+            <div class="lbl" id="lbl-live">live long (0.97)</div>
+            <div class="fps">FPS: 29.8</div>
+            <div class="voice">
+              <span id="voice-off">Voice: OFF</span>
+              <span id="voice-on" style="opacity: 0">Voice: ON</span>
+            </div>
+            <div class="instr">Press 'v' to toggle voice, 'r' to record, 'q' to quit</div>
+          </div>
+          <div id="bubble">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#141216" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 9v6h4l5 4V5L8 9H4z" fill="#141216" />
+              <path d="M16.5 8.5a5 5 0 0 1 0 7" />
+              <path d="M19.5 5.5a9 9 0 0 1 0 13" />
+            </svg>
+            <span>“live long”</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- the hand: 21 MediaPipe landmarks, one persistent subject -->
+      <div id="rig-layer" class="clip" data-start="0" data-duration="22.5" data-track-index="2">
+        <div id="rig">
+          <div id="rig-inner">
+            <svg id="hand" viewBox="-1.4 -2.5 2.8 2.9">
+              <g id="bones"></g>
+              <g id="dots"></g>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scene 1 — 21 dots -->
+      <section id="s1" class="clip" data-start="0" data-duration="3" data-track-index="3">
+        <div id="meta">
+          <div><b>recorded_gestures/index_20260709_201708.json</b></div>
+          <div>100 frames · 21 landmarks · (x, y) px</div>
+        </div>
+        <div class="col">
+          <h2 class="display" id="hook">Your hand is <span class="red" style="white-space: nowrap">21 dots.</span></h2>
+        </div>
+      </section>
+
+      <!-- Scene 2 — the window -->
+      <section id="s2" class="clip" data-start="3" data-duration="4" data-track-index="3">
+        <div class="col">
+          <h2 class="display">Real-time gesture recognition.</h2>
+          <p class="sub"><b>MediaPipe</b> finds the hand. <b>TensorFlow</b> names the gesture. Just a webcam.</p>
+        </div>
+      </section>
+
+      <!-- Scene 3 — ten gestures -->
+      <section id="s3" class="clip" data-start="7" data-duration="5" data-track-index="3">
+        <div class="col">
+          <h2 class="display" style="font-size: 72px">10 gestures out of the box.</h2>
+          <div class="glist">
+            <div id="g-okay"><i></i>okay</div>
+            <div id="g-peace"><i></i>peace</div>
+            <div id="g-thumbs"><i></i>thumbs up</div>
+            <div id="g-thumbsdown"><i></i>thumbs down</div>
+            <div id="g-call"><i></i>call me</div>
+            <div id="g-stop"><i></i>stop</div>
+            <div id="g-rock"><i></i>rock</div>
+            <div id="g-live"><i></i>live long</div>
+            <div id="g-fist"><i></i>fist</div>
+            <div id="g-smile"><i></i>smile</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 4 — it talks back -->
+      <section id="s4" class="clip" data-start="12" data-duration="3" data-track-index="3">
+        <div class="col">
+          <h2 class="display">It talks back.</h2>
+          <div class="keyrow">
+            <div class="keycap" id="keyv">v</div>
+            <div>Text-to-speech via <b style="color: var(--fg)">gTTS</b>, toggled live.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 5 — teach it yours -->
+      <section id="s5" class="clip" data-start="15" data-duration="4" data-track-index="3">
+        <h2 class="display" id="s5-h">Teach it <span class="red">your own.</span></h2>
+        <div class="term" id="term">
+          <div class="titlebar">
+            <div class="lights"><i></i><i></i><i></i></div>
+            <div class="t">zsh — Hand-Gesture-Recognition</div>
+          </div>
+          <div class="body">
+            <div class="row"><span class="ps">$ </span><span class="cmd" id="c1">python main.py record --gesture index</span></div>
+            <div class="out" id="o1">Saved <b>100</b> samples to recorded_gestures/index_20260709_201708.json</div>
+            <div class="row"><span class="ps">$ </span><span class="cmd" id="c2">python main.py train</span></div>
+            <div class="out" id="o2">Model saved to models/custom_model</div>
+            <div class="row"><span class="ps">$ </span><span class="cmd" id="c3">python main.py recognize --model custom</span></div>
+            <div class="row" id="c4" style="opacity: 0"><span class="ps">$ </span><span class="caret" id="caret"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 6 — press 'q' to quit -->
+      <section id="s6" class="clip" data-start="19" data-duration="3.5" data-track-index="3">
+        <div class="col">
+          <h2 class="display" id="title">Hand Gesture Recognition</h2>
+          <p class="sub" id="stack">MediaPipe · TensorFlow · gTTS</p>
+          <div class="punch" id="punch">Press 'q' to quit.</div>
+        </div>
+      </section>
+
+      <!-- audio: music bed -->
+      <audio id="bgm" data-start="0" data-duration="22.5" data-track-index="10" data-volume="0.32" src="assets/music/happy-beats-business-moves-vol-1-by-ende-dot-app.mp3"></audio>
+
+      <!-- sfx: dots + bones -->
+      <audio id="sfx-dot1" data-start="0.15" data-duration="0.4" data-track-index="11" data-volume="0.4" src="assets/sfx/ui/rollover2.ogg"></audio>
+      <audio id="sfx-dot2" data-start="0.6" data-duration="0.4" data-track-index="12" data-volume="0.35" src="assets/sfx/ui/rollover2.ogg"></audio>
+      <audio id="sfx-bones" data-start="1.0" data-duration="0.6" data-track-index="11" data-volume="0.5" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <!-- window reveal + first label -->
+      <audio id="sfx-win" data-start="3.0" data-duration="0.6" data-track-index="11" data-volume="0.7" src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio>
+      <audio id="sfx-lbl" data-start="4.02" data-duration="0.4" data-track-index="12" data-volume="0.5" src="assets/sfx/interface/click_003.ogg"></audio>
+      <!-- beat-grid gesture changes -->
+      <audio id="sfx-g1" data-start="7.02" data-duration="0.4" data-track-index="11" data-volume="0.45" src="assets/sfx/ui/click2.ogg"></audio>
+      <audio id="sfx-g2" data-start="8.02" data-duration="0.4" data-track-index="12" data-volume="0.45" src="assets/sfx/interface/click_005.ogg"></audio>
+      <audio id="sfx-g3" data-start="9.02" data-duration="0.4" data-track-index="11" data-volume="0.45" src="assets/sfx/ui/click2.ogg"></audio>
+      <audio id="sfx-g4" data-start="10.02" data-duration="0.4" data-track-index="12" data-volume="0.45" src="assets/sfx/interface/click_005.ogg"></audio>
+      <audio id="sfx-g5" data-start="11.02" data-duration="0.4" data-track-index="11" data-volume="0.45" src="assets/sfx/ui/click2.ogg"></audio>
+      <!-- voice toggle -->
+      <audio id="sfx-keyv" data-start="12.5" data-duration="0.4" data-track-index="11" data-volume="0.8" src="assets/sfx/keyboard/keypress-005.wav"></audio>
+      <audio id="sfx-switch" data-start="12.56" data-duration="0.5" data-track-index="12" data-volume="0.4" src="assets/sfx/interface/switch_007.ogg"></audio>
+      <audio id="sfx-bubble" data-start="12.9" data-duration="0.6" data-track-index="13" data-volume="0.6" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <!-- terminal -->
+      <audio id="sfx-term" data-start="15.0" data-duration="0.6" data-track-index="11" data-volume="0.5" src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio>
+      <audio id="sfx-type-0" data-start="15.30" data-duration="0.25" data-track-index="15" data-volume="0.35" src="assets/sfx/keyboard/keypress-001.wav"></audio>
+      <audio id="sfx-type-1" data-start="15.40" data-duration="0.25" data-track-index="16" data-volume="0.35" src="assets/sfx/keyboard/keypress-012.wav"></audio>
+      <audio id="sfx-type-2" data-start="15.50" data-duration="0.25" data-track-index="17" data-volume="0.35" src="assets/sfx/keyboard/keypress-005.wav"></audio>
+      <audio id="sfx-type-3" data-start="15.60" data-duration="0.25" data-track-index="15" data-volume="0.35" src="assets/sfx/keyboard/keypress-018.wav"></audio>
+      <audio id="sfx-type-4" data-start="15.70" data-duration="0.25" data-track-index="16" data-volume="0.35" src="assets/sfx/keyboard/keypress-009.wav"></audio>
+      <audio id="sfx-type-5" data-start="15.80" data-duration="0.25" data-track-index="17" data-volume="0.35" src="assets/sfx/keyboard/keypress-003.wav"></audio>
+      <audio id="sfx-type-6" data-start="16.30" data-duration="0.25" data-track-index="15" data-volume="0.35" src="assets/sfx/keyboard/keypress-015.wav"></audio>
+      <audio id="sfx-type-7" data-start="16.40" data-duration="0.25" data-track-index="16" data-volume="0.35" src="assets/sfx/keyboard/keypress-007.wav"></audio>
+      <audio id="sfx-type-8" data-start="16.50" data-duration="0.25" data-track-index="17" data-volume="0.35" src="assets/sfx/keyboard/keypress-001.wav"></audio>
+      <audio id="sfx-type-9" data-start="16.60" data-duration="0.25" data-track-index="15" data-volume="0.35" src="assets/sfx/keyboard/keypress-012.wav"></audio>
+      <audio id="sfx-type-10" data-start="17.30" data-duration="0.25" data-track-index="16" data-volume="0.35" src="assets/sfx/keyboard/keypress-005.wav"></audio>
+      <audio id="sfx-type-11" data-start="17.40" data-duration="0.25" data-track-index="17" data-volume="0.35" src="assets/sfx/keyboard/keypress-018.wav"></audio>
+      <audio id="sfx-type-12" data-start="17.50" data-duration="0.25" data-track-index="15" data-volume="0.35" src="assets/sfx/keyboard/keypress-009.wav"></audio>
+      <audio id="sfx-type-13" data-start="17.60" data-duration="0.25" data-track-index="16" data-volume="0.35" src="assets/sfx/keyboard/keypress-003.wav"></audio>
+      <audio id="sfx-type-14" data-start="17.70" data-duration="0.25" data-track-index="17" data-volume="0.35" src="assets/sfx/keyboard/keypress-015.wav"></audio>
+      <audio id="sfx-type-15" data-start="17.80" data-duration="0.25" data-track-index="15" data-volume="0.35" src="assets/sfx/keyboard/keypress-007.wav"></audio>
+      <audio id="sfx-enter1" data-start="16.02" data-duration="0.4" data-track-index="14" data-volume="0.55" src="assets/sfx/interface/click_002.ogg"></audio>
+      <audio id="sfx-enter2" data-start="17.02" data-duration="0.4" data-track-index="14" data-volume="0.55" src="assets/sfx/interface/click_002.ogg"></audio>
+      <audio id="sfx-enter3" data-start="18.02" data-duration="0.4" data-track-index="14" data-volume="0.55" src="assets/sfx/interface/click_002.ogg"></audio>
+      <!-- outro -->
+      <audio id="sfx-title" data-start="19.5" data-duration="1.8" data-track-index="11" data-volume="0.55" src="assets/sfx/impact/impactBell_heavy_000.ogg"></audio>
+      <audio id="sfx-punch" data-start="20.02" data-duration="0.4" data-track-index="12" data-volume="0.55" src="assets/sfx/interface/click_003.ogg"></audio>
+    </div>
+
+    <script>
+      (function () {
+        const NS = "http://www.w3.org/2000/svg";
+        const H = window.HAND;
+        const P = H.poses;
+        const REC = H.recording;
+        const CONN = [
+          [0, 1], [1, 2], [2, 3], [3, 4],
+          [0, 5], [5, 6], [6, 7], [7, 8],
+          [5, 9], [9, 10], [10, 11], [11, 12],
+          [9, 13], [13, 14], [14, 15], [15, 16],
+          [13, 17], [0, 17], [17, 18], [18, 19], [19, 20],
+        ];
+        const DOT_R = 0.052;
+
+        // Build the skeleton at the first recorded frame.
+        const bonesG = document.getElementById("bones");
+        const dotsG = document.getElementById("dots");
+        const start = REC[0];
+        const bones = CONN.map(([a, b]) => {
+          const l = document.createElementNS(NS, "line");
+          l.setAttribute("x1", start[a][0]);
+          l.setAttribute("y1", start[a][1]);
+          l.setAttribute("x2", start[b][0]);
+          l.setAttribute("y2", start[b][1]);
+          l.setAttribute("pathLength", "1");
+          l.setAttribute("stroke-dasharray", "1");
+          l.setAttribute("stroke-dashoffset", "1");
+          bonesG.appendChild(l);
+          return l;
+        });
+        const dots = start.map(([x, y]) => {
+          const c = document.createElementNS(NS, "circle");
+          c.setAttribute("cx", x);
+          c.setAttribute("cy", y);
+          c.setAttribute("r", 0);
+          dotsG.appendChild(c);
+          return c;
+        });
+
+        const tl = gsap.timeline({ paused: true });
+
+        function morph(pts, at, dur, ease) {
+          dots.forEach((d, i) => {
+            tl.to(d, { attr: { cx: pts[i][0], cy: pts[i][1] }, duration: dur, ease: ease }, at);
+          });
+          bones.forEach((b, j) => {
+            const [a, c] = CONN[j];
+            tl.to(
+              b,
+              { attr: { x1: pts[a][0], y1: pts[a][1], x2: pts[c][0], y2: pts[c][1] }, duration: dur, ease: ease },
+              at,
+            );
+          });
+        }
+
+        // ---------------- Background ----------------
+        tl.fromTo("#grid", { x: 0, y: 0 }, { x: -120, y: -60, duration: 22.5, ease: "none" }, 0);
+        tl.fromTo("#marks", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.1);
+        tl.fromTo("#footer-tag", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 3.2);
+        tl.to("#footer-tag", { opacity: 0, duration: 0.3 }, 14.8);
+        tl.to("#footer-tag", { opacity: 1, duration: 0.4 }, 19.2);
+
+        // Audio-reactive glow: bass band -> scale/opacity, one keyframe per frame.
+        const bass = window.AUDIO_BASS;
+        tl.to(
+          "#glow",
+          {
+            keyframes: bass.map((v) => ({ scale: 0.88 + v * 0.3, opacity: 0.5 + v * 0.5, duration: 1 / 30, ease: "none" })),
+            ease: "none",
+          },
+          0,
+        );
+        // glow follows the hand off-screen during the terminal scene
+        tl.to("#glow", { y: 420, duration: 0.5, ease: "power2.inOut" }, 14.8);
+        tl.to("#glow", { y: 0, duration: 0.6, ease: "power2.inOut" }, 18.8);
+
+        // ---------------- Scene 1: 21 dots ----------------
+        tl.fromTo("#rig", { scale: 1.28 }, { scale: 1.24, duration: 2.9, ease: "none" }, 0);
+        dots.forEach((d, i) => {
+          tl.to(d, { attr: { r: DOT_R }, duration: 0.28, ease: "back.out(3)" }, 0.15 + i * 0.045);
+        });
+        bones.forEach((b, j) => {
+          tl.to(b, { attr: { "stroke-dashoffset": 0 }, duration: 0.3, ease: "power2.out" }, 0.95 + j * 0.018);
+        });
+        // real recorded frames play back
+        const recDur = 1.75 / (REC.length - 1);
+        dots.forEach((d, i) => {
+          tl.to(
+            d,
+            { keyframes: REC.slice(1).map((f) => ({ attr: { cx: f[i][0], cy: f[i][1] }, duration: recDur, ease: "none" })), ease: "none" },
+            1.25,
+          );
+        });
+        bones.forEach((b, j) => {
+          const [a, c] = CONN[j];
+          tl.to(
+            b,
+            {
+              keyframes: REC.slice(1).map((f) => ({
+                attr: { x1: f[a][0], y1: f[a][1], x2: f[c][0], y2: f[c][1] },
+                duration: recDur,
+                ease: "none",
+              })),
+              ease: "none",
+            },
+            1.25,
+          );
+        });
+        tl.fromTo("#meta", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 0.3);
+        tl.fromTo("#hook", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, 1.2);
+        tl.to(["#hook", "#meta"], { opacity: 0, duration: 0.2, ease: "power1.in" }, 2.8);
+
+        // ---------------- Scene 2: the window ----------------
+        tl.fromTo("#win-inner", { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.5, ease: "power3.out" }, 2.9); // beat-locked: 3.02 lands mid-reveal
+        tl.to("#rig", { scale: 0.92, duration: 0.55, ease: "power3.inOut" }, 2.95);
+        morph(P["peace"], 3.0, 0.55, "power3.inOut");
+        tl.set("#lbl-peace", { opacity: 1 }, 4.02); // beat-grid: 4.02
+        tl.fromTo("#s2 h2", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.5, ease: "power4.out" }, 3.25);
+        tl.fromTo("#s2 .sub", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 3.6);
+        tl.to("#s2 .col", { opacity: 0, duration: 0.2 }, 6.8);
+
+        // ---------------- Scene 3: ten gestures ----------------
+        // beat-grid: morphs at 7.02, 8.02, 9.02, 10.02, 11.02 (every other beat so each label holds ~0.65s+)
+        const seq = [
+          ["thumbs up", "#lbl-thumbs", "#g-thumbs"],
+          ["rock", "#lbl-rock", "#g-rock"],
+          ["call me", "#lbl-call", "#g-call"],
+          ["okay", "#lbl-okay", "#g-okay"],
+          ["live long", "#lbl-live", "#g-live"],
+        ];
+        let prevLbl = "#lbl-peace";
+        let prevItem = null;
+        seq.forEach(([name, lbl, item], i) => {
+          const t = 7.02 + i;
+          tl.set(prevLbl, { opacity: 0 }, t); // smoother drops the label mid-transition
+          morph(P[name], t, 0.34, "power3.inOut");
+          tl.set(lbl, { opacity: 1 }, t + 0.34);
+          if (prevItem) {
+            tl.set(prevItem, { color: "#9a939c" }, t + 0.34);
+            tl.set(prevItem + " i", { opacity: 0 }, t + 0.34);
+          }
+          tl.set(item, { color: "#f2eeee" }, t + 0.34);
+          tl.set(item + " i", { opacity: 1 }, t + 0.34);
+          prevLbl = lbl;
+          prevItem = item;
+        });
+        tl.fromTo("#s3 h2", { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, 7.05);
+        tl.fromTo(
+          "#s3 .glist > div",
+          { opacity: 0, x: 30 },
+          { opacity: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.035 },
+          7.15,
+        );
+        tl.to("#s3 .col", { opacity: 0, duration: 0.2 }, 11.8);
+
+        // ---------------- Scene 4: it talks back ----------------
+        tl.fromTo("#s4 h2", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2)", transformOrigin: "0% 50%" }, 12.05);
+        tl.fromTo("#s4 .keyrow", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 12.2);
+        tl.to("#keyv", { y: 8, boxShadow: "0 2px 0 #0a090c", borderColor: "#ff2d2d", duration: 0.07, ease: "power2.in" }, 12.5);
+        tl.to("#keyv", { y: 0, boxShadow: "0 10px 0 #0a090c", borderColor: "#3a3740", duration: 0.18, ease: "power2.out" }, 12.62);
+        tl.set("#voice-off", { opacity: 0 }, 12.56);
+        tl.set("#voice-on", { opacity: 1 }, 12.56);
+        tl.fromTo("#bubble", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2.2)" }, 12.9);
+        tl.to("#s4 .col", { opacity: 0, duration: 0.2 }, 14.8);
+        tl.to("#win-inner", { opacity: 0, scale: 0.97, duration: 0.25, ease: "power2.in" }, 14.8);
+        tl.to("#rig", { opacity: 0, scale: 0.85, duration: 0.25, ease: "power2.in" }, 14.8);
+
+        // ---------------- Scene 5: teach it yours ----------------
+        tl.fromTo("#s5-h", { opacity: 0, x: -50 }, { opacity: 1, x: 0, duration: 0.45, ease: "expo.out" }, 15.0);
+        tl.fromTo("#term", { opacity: 0, y: 80 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 15.05);
+        const cmds = [
+          ["#c1", 37, 15.3, 0.6, "#o1", 16.02],
+          ["#c2", 20, 16.3, 0.35, "#o2", 17.02],
+          ["#c3", 39, 17.3, 0.6, null, 18.02],
+        ];
+        cmds.forEach(([sel, n, t0, dur, out, enter]) => {
+          tl.fromTo(
+            sel,
+            { clipPath: "inset(0% 100% 0% 0%)" },
+            { clipPath: "inset(0% 0% 0% 0%)", duration: dur, ease: "steps(" + n + ")" },
+            t0,
+          );
+          if (out) tl.fromTo(out, { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.2, ease: "power2.out" }, enter); // beat-grid
+        });
+        tl.set("#c4", { opacity: 1 }, 18.02);
+        [18.3, 18.55].forEach((t, i) => tl.set("#caret", { opacity: i % 2 ? 1 : 0 }, t));
+        tl.to(["#s5-h", "#term"], { opacity: 0, duration: 0.25, ease: "power2.in" }, 18.75);
+
+        // ---------------- Scene 6: press 'q' to quit ----------------
+        tl.set("#rig", { scale: 1.12 }, 18.9);
+        morph(P["stop"], 18.9, 0.01, "none");
+        tl.to("#rig", { opacity: 1, duration: 0.4, ease: "power2.out" }, 19.0);
+        tl.fromTo("#rig-inner", { y: 60 }, { y: 0, duration: 0.6, ease: "power3.out" }, 19.0);
+        tl.to(
+          "#rig-inner",
+          {
+            keyframes: [
+              { rotation: -12, duration: 0.28, ease: "sine.inOut" },
+              { rotation: 10, duration: 0.5, ease: "sine.inOut" },
+              { rotation: -8, duration: 0.5, ease: "sine.inOut" },
+              { rotation: 6, duration: 0.5, ease: "sine.inOut" },
+              { rotation: 0, duration: 0.45, ease: "sine.inOut" },
+            ],
+            transformOrigin: "50% 86%",
+            ease: "none",
+          },
+          19.5,
+        );
+        tl.fromTo("#title", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 19.4); // beat-grid: settles ~19.52
+        tl.fromTo("#stack", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 19.75);
+        tl.fromTo("#punch", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.3, ease: "power4.out" }, 20.02); // beat-locked: 20.02
+
+        // music fade out
+        tl.to("#bgm", { volume: 0, duration: 1.2, ease: "power1.in" }, 21.3);
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>
