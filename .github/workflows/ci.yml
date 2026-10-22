@@ -4,22 +4,29 @@ on:
   push:
   pull_request:
 
+# The job only reads the repo; don't hand it a token that can push.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned to commit SHAs (tags can be moved).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
 
       # The unit tests only cover the TensorFlow-free modules (dataset,
-      # landmarks, smoothing), so CI stays fast by not installing the full
-      # ML stack. Ruff is pinned (keep in sync with requirements-dev.txt)
-      # because new Ruff releases can enable extra lint rules by default.
+      # landmarks, smoothing, config, profiles, audio), so CI stays fast by
+      # not installing the full ML stack; tests that need TensorFlow, Keras
+      # or a display skip themselves. Versions are pinned (keep in sync with
+      # requirements*.txt) because new Ruff releases can enable extra lint
+      # rules by default.
       - name: Install test dependencies
-        run: pip install numpy pytest ruff==0.16.8
+        run: pip install numpy==1.26.4 gTTS==2.5.4 pytest==9.1.1 ruff==0.16.8
 
       - name: Lint
         run: ruff check gesture_recognition main.py tests

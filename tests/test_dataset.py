@@ -21,6 +21,15 @@ def test_safe_gesture_name_rejects_empty():
     assert safe_gesture_name("///") == ""
 
 
+def test_safe_gesture_name_fits_in_a_filename():
+    # The recorder appends "_YYYYmmdd_HHMMSS.json"; file names are limited
+    # to 255 bytes, and \w also matches multi-byte letters.
+    for char in ("a", "é", "手", "\U00020000"):
+        name = safe_gesture_name(char * 300)
+        assert name
+        assert len(f"{name}_20260101_120000.json".encode()) <= 255
+
+
 def test_simple_gesture_name():
     assert gesture_name_from_filename("index_20260709_201708.json") == "index"
 

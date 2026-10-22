@@ -36,7 +36,7 @@ tempCodeRunnerFile.py
 *.tmp
 *.pid
 
-# Generated audio (AudioManager writes to the system temp dir; these are strays)
+# Generated audio (AudioManager caches it in ~/.cache/hand-gesture-recognition; these are strays)
 *.mp3
 
 # Training inputs and outputs — reproducible via `python main.py record` / `train`

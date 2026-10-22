@@ -1,14 +1,32 @@
 import json
 import os
+import re
 
 from gesture_recognition.config import BASE_DIR
+
+# Profile names become file names under data/profiles/
+PROFILE_NAME_PATTERN = re.compile(r"[\w\- ]+")
+
+
+def validate_profile_name(name):
+    """Return ``name`` if it is safe to use as a profile file name.
+
+    Raises ValueError for anything that could point outside data/profiles/
+    (path separators, ``..``) or is blank.
+    """
+    if not PROFILE_NAME_PATTERN.fullmatch(name) or not name.strip():
+        raise ValueError(
+            f"Invalid profile name {name!r}: use only letters, digits, "
+            "spaces, '_' and '-'."
+        )
+    return name
 
 
 class UserProfile:
     """Manages user-specific settings and preferences"""
 
     def __init__(self, profile_name="default"):
-        self.profile_name = profile_name
+        self.profile_name = validate_profile_name(profile_name)
         # Only settings the user actually saved. Missing keys fall back to
         # env vars / defaults via config.resolve_setting().
         self.settings = {}

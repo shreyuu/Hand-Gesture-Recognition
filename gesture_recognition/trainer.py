@@ -38,6 +38,15 @@ class GestureTrainer:
             print(f"No gesture data files found in {self.data_dir}")
             return False
 
+        # A one-class softmax reports that class at 1.00 for every hand
+        if len(set(self.y_train)) < 2:
+            print(
+                "Need samples of at least two different gestures to train "
+                f"(found: {', '.join(self.gestures)}). Record more with "
+                "`python main.py record`."
+            )
+            return False
+
         print(f"Loaded {len(self.x_train)} samples for {len(self.gestures)} gestures")
         return True
 
@@ -46,8 +55,12 @@ class GestureTrainer:
         self.x_train = np.array(self.x_train, dtype=np.float32)
         self.y_train = np.array(self.y_train)
 
-        # One-hot encode the labels
-        self.y_train = tf.keras.utils.to_categorical(self.y_train)
+        # One-hot encode the labels. Pass the class count explicitly: inferred
+        # from the labels, it would be short if the last gesture has no
+        # samples, and no longer match the model's output layer.
+        self.y_train = tf.keras.utils.to_categorical(
+            self.y_train, num_classes=len(self.gestures)
+        )
 
         # Shuffle so the validation split isn't a single gesture
         indices = np.random.permutation(len(self.x_train))
@@ -91,8 +104,8 @@ class GestureTrainer:
             TensorBoard(log_dir=os.path.join(BASE_DIR, "logs", "fit"), histogram_freq=1)
         ]
 
-        # A validation split only makes sense with more than one class and
-        # enough samples to hold some out.
+        # A validation split only makes sense with enough samples to hold
+        # some out (load_data already ensured there are two classes).
         validation_split = 0.2 if len(self.x_train) >= 10 else 0.0
         if validation_split:
             callbacks.append(

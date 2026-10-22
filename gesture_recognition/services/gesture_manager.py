@@ -20,6 +20,16 @@ class GestureManager:
         with open(self.names_path, "r") as f:
             self.class_names = [line.strip() for line in f if line.strip()]
 
+        # Otherwise predictions index past the end of the list, or (if a
+        # name is missing in the middle) silently get the wrong label
+        num_outputs = self.model.output_shape[-1]
+        if len(self.class_names) != num_outputs:
+            raise ValueError(
+                f"{self.names_path} lists {len(self.class_names)} gestures but "
+                f"the model at {self.model_path} predicts {num_outputs}; they "
+                "must match."
+            )
+
         print(f"Loaded {len(self.class_names)} gestures: {', '.join(self.class_names)}")
 
     def predict_gesture(self, landmarks):

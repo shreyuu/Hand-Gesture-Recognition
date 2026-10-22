@@ -14,15 +14,20 @@ from gesture_recognition.landmarks import normalize_landmarks
 # timestamp is always the last two underscore-separated parts.
 TIMESTAMP_PARTS = 2
 
+# Keeps "<name>_<timestamp>.json" under the 255-byte file name limit even
+# when every character is a 4-byte UTF-8 letter.
+MAX_GESTURE_NAME_LENGTH = 50
+
 
 def safe_gesture_name(name):
     """Make a user-entered gesture name safe to use in a filename.
 
     Letters, digits, spaces, ``_`` and ``-`` are kept; anything else (path
-    separators, ``..``, etc.) becomes ``_``. Returns ``""`` if nothing usable
-    is left.
+    separators, ``..``, etc.) becomes ``_``. Long names are truncated.
+    Returns ``""`` if nothing usable is left.
     """
-    return re.sub(r"[^\w\- ]", "_", name.strip()).strip(" _")
+    name = re.sub(r"[^\w\- ]", "_", name.strip()).strip(" _")
+    return name[:MAX_GESTURE_NAME_LENGTH].rstrip(" _")
 
 
 def gesture_name_from_filename(filename):

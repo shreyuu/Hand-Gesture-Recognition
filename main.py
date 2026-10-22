@@ -7,7 +7,15 @@ from gesture_recognition.config import BASE_DIR
 from gesture_recognition.recorder import record_gesture
 from gesture_recognition.trainer import GestureTrainer
 from gesture_recognition.ui.settings_dialog import SettingsDialog
-from gesture_recognition.user_profile import UserProfile
+from gesture_recognition.user_profile import UserProfile, validate_profile_name
+
+
+def profile_name(value):
+    """argparse type for --profile: reject names that aren't safe file names."""
+    try:
+        return validate_profile_name(value)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
 
 
 def main():
@@ -22,7 +30,7 @@ def main():
         "recognize", help="Run gesture recognition"
     )
     recognize_parser.add_argument(
-        "--profile", type=str, default="default", help="User profile to load"
+        "--profile", type=profile_name, default="default", help="User profile to load"
     )
     recognize_parser.add_argument(
         "--model",
@@ -38,7 +46,7 @@ def main():
         "--gesture", type=str, help="Name of the gesture to record (prompted if omitted)"
     )
     record_parser.add_argument(
-        "--profile", type=str, default="default", help="User profile to load"
+        "--profile", type=profile_name, default="default", help="User profile to load"
     )
 
     # Training mode
@@ -57,7 +65,7 @@ def main():
         "settings", help="Configure application settings"
     )
     settings_parser.add_argument(
-        "--profile", type=str, default="default", help="User profile to configure"
+        "--profile", type=profile_name, default="default", help="User profile to configure"
     )
 
     # Parse arguments
@@ -70,6 +78,10 @@ def main():
             "Enter mode (recognize/record/train/settings) [recognize]: "
         ).strip().lower()
         mode = choice or "recognize"
+        if mode not in subparsers.choices:
+            parser.error(
+                f"unknown mode {mode!r} (choose from {', '.join(subparsers.choices)})"
+            )
 
     # Handle different modes
     if mode == "record":
