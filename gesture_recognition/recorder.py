@@ -42,142 +42,144 @@ def record_gesture(gesture_name=None, profile=None):
             "Set GESTURE_CAM_INDEX or the profile's camera_index."
         )
         return
-    detector = handDetector(
-        detectionCon=config.resolve_setting("detection_confidence", profile),
-        maxHands=config.MAX_HANDS,
-    )
 
-    sample_count = 0
-    max_samples = 100
-    samples = []
+    # Release the camera even if recording or saving fails
+    try:
+        detector = handDetector(
+            detectionCon=config.resolve_setting("detection_confidence", profile),
+            maxHands=config.MAX_HANDS,
+        )
 
-    print(
-        f"Recording gesture '{gesture_name}'. Press 's' to save a sample, 'q' to finish."
-    )
-    print("Try to record the gesture in various positions and angles.")
+        sample_count = 0
+        max_samples = 100
+        samples = []
 
-    recording_active = False
-    last_sample_time = 0.0
-    failed_reads = 0
+        print(
+            f"Recording gesture '{gesture_name}'. Press 's' to save a sample, 'q' to finish."
+        )
+        print("Try to record the gesture in various positions and angles.")
 
-    while True:
-        success, img = cap.read()
-        if not success:
-            failed_reads += 1
-            if failed_reads > config.MAX_FAILED_READS:
-                print("Camera stopped delivering frames, aborting.")
-                break
-            continue
+        recording_active = False
+        last_sample_time = 0.0
         failed_reads = 0
 
-        # Flip image horizontally
-        img = cv2.flip(img, 1)
+        while True:
+            success, img = cap.read()
+            if not success:
+                failed_reads += 1
+                if failed_reads > config.MAX_FAILED_READS:
+                    print("Camera stopped delivering frames, aborting.")
+                    break
+                continue
+            failed_reads = 0
 
-        # Find hands
-        img = detector.findHands(img)
-        lmList = detector.findPosition(img, draw=True)
+            # Flip image horizontally
+            img = cv2.flip(img, 1)
 
-        # Status display
-        cv2.putText(
-            img,
-            f"Gesture: {gesture_name}",
-            (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (0, 255, 0),
-            2,
-        )
-        cv2.putText(
-            img,
-            f"Samples: {sample_count}/{max_samples}",
-            (10, 60),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (0, 255, 0),
-            2,
-        )
+            # Find hands
+            img = detector.findHands(img)
+            lmList = detector.findPosition(img, draw=True)
 
-        # Recording status
-        status_text = "READY TO RECORD" if not recording_active else "RECORDING ACTIVE"
-        status_color = (0, 255, 0) if not recording_active else (0, 0, 255)
-        cv2.putText(
-            img, status_text, (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2
-        )
+            # Status display
+            cv2.putText(
+                img,
+                f"Gesture: {gesture_name}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2,
+            )
+            cv2.putText(
+                img,
+                f"Samples: {sample_count}/{max_samples}",
+                (10, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2,
+            )
 
-        cv2.putText(
-            img,
-            "Press 'r' to toggle recording",
-            (10, 120),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (255, 255, 255),
-            2,
-        )
-        cv2.putText(
-            img,
-            "Press 's' to save current frame",
-            (10, 150),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (255, 255, 255),
-            2,
-        )
-        cv2.putText(
-            img,
-            "Press 'q' to quit",
-            (10, 180),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (255, 255, 255),
-            2,
-        )
+            # Recording status
+            status_text = "READY TO RECORD" if not recording_active else "RECORDING ACTIVE"
+            status_color = (0, 255, 0) if not recording_active else (0, 0, 255)
+            cv2.putText(
+                img, status_text, (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2
+            )
 
-        # Show image
-        cv2.imshow("Gesture Recorder", img)
+            cv2.putText(
+                img,
+                "Press 'r' to toggle recording",
+                (10, 120),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                2,
+            )
+            cv2.putText(
+                img,
+                "Press 's' to save current frame",
+                (10, 150),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                2,
+            )
+            cv2.putText(
+                img,
+                "Press 'q' to quit",
+                (10, 180),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                2,
+            )
 
-        # Auto-save if recording is active and hand is detected
-        now = time.time()
-        if (
-            recording_active
-            and lmList
-            and sample_count < max_samples
-            and (now - last_sample_time) >= AUTO_SAMPLE_INTERVAL
-        ):
-            # Get landmarks in format [x, y]
-            landmarks = [[lm[1], lm[2]] for lm in lmList]
-            samples.append(landmarks)
-            sample_count += 1
-            last_sample_time = now
-            print(f"Sample {sample_count} recorded")
+            # Show image
+            cv2.imshow("Gesture Recorder", img)
 
-            if sample_count >= max_samples:
-                print("Maximum number of samples reached!")
-                recording_active = False
+            # Auto-save if recording is active and hand is detected
+            now = time.time()
+            if (
+                recording_active
+                and lmList
+                and sample_count < max_samples
+                and (now - last_sample_time) >= AUTO_SAMPLE_INTERVAL
+            ):
+                # Get landmarks in format [x, y]
+                landmarks = [[lm[1], lm[2]] for lm in lmList]
+                samples.append(landmarks)
+                sample_count += 1
+                last_sample_time = now
+                print(f"Sample {sample_count} recorded")
 
-        key = cv2.waitKey(1)
-        if key == ord("q"):
-            break
-        elif key == ord("r"):
-            recording_active = not recording_active
-            print(f"Recording {'started' if recording_active else 'paused'}")
-        elif key == ord("s") and lmList and sample_count < max_samples:
-            # Manually save current frame
-            landmarks = [[lm[1], lm[2]] for lm in lmList]
-            samples.append(landmarks)
-            sample_count += 1
-            print(f"Sample {sample_count} manually recorded")
+                if sample_count >= max_samples:
+                    print("Maximum number of samples reached!")
+                    recording_active = False
 
-    # Save recorded samples
-    if samples:
-        filename = os.path.join(
-            RECORDINGS_DIR, f"{gesture_name}_{time.strftime('%Y%m%d_%H%M%S')}.json"
-        )
-        with open(filename, "w") as f:
-            json.dump(samples, f)
-        print(f"Saved {sample_count} samples to {filename}")
-    else:
-        print("No samples recorded.")
+            key = cv2.waitKey(1)
+            if key == ord("q"):
+                break
+            elif key == ord("r"):
+                recording_active = not recording_active
+                print(f"Recording {'started' if recording_active else 'paused'}")
+            elif key == ord("s") and lmList and sample_count < max_samples:
+                # Manually save current frame
+                landmarks = [[lm[1], lm[2]] for lm in lmList]
+                samples.append(landmarks)
+                sample_count += 1
+                print(f"Sample {sample_count} manually recorded")
 
-    # Release resources
-    cap.release()
-    cv2.destroyAllWindows()
+        # Save recorded samples
+        if samples:
+            filename = os.path.join(
+                RECORDINGS_DIR, f"{gesture_name}_{time.strftime('%Y%m%d_%H%M%S')}.json"
+            )
+            with open(filename, "w") as f:
+                json.dump(samples, f)
+            print(f"Saved {sample_count} samples to {filename}")
+        else:
+            print("No samples recorded.")
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()

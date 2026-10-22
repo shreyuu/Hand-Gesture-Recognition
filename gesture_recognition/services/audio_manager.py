@@ -12,6 +12,26 @@ from gtts import gTTS
 from gtts.tts import gTTSError
 
 
+def _cache_dir():
+    """Return a per-user directory for generated speech, private to this user.
+
+    Not the system temp dir: on Linux that is a shared /tmp, where another
+    user could pre-create a file under the predictable name and have it
+    played.
+    """
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.join(
+        os.path.expanduser("~"), ".cache"
+    )
+    path = os.path.join(base, "hand-gesture-recognition", "tts")
+    try:
+        os.makedirs(path, exist_ok=True)
+        os.chmod(path, 0o700)
+    except OSError:
+        # e.g. read-only home: fall back to a private, per-run directory
+        return tempfile.mkdtemp(prefix="gesture-tts-")
+    return path
+
+
 class AudioManager:
     """
     Handles text-to-speech conversion and audio playback in a non-blocking manner.
@@ -25,7 +45,7 @@ class AudioManager:
         self.cache_size = cache_size
         self.audio_thread = None
         self.lock = threading.Lock()
-        self.temp_dir = tempfile.gettempdir()
+        self.cache_dir = _cache_dir()
         self._player = self._find_player()
         self._warned_no_player = False
 
@@ -92,25 +112,42 @@ class AudioManager:
             else:
                 # hashlib (not hash()) so the filename is stable across runs
                 # and cached files survive restarts.
-                digest = hashlib.md5(
+                digest = hashlib.sha256(
                     f"{text}|{lang}|{slow}".encode()
                 ).hexdigest()
-                audio_path = os.path.join(self.temp_dir, f"gesture_{digest}.mp3")
+                audio_path = os.path.join(self.cache_dir, f"gesture_{digest}.mp3")
 
-                if not os.path.exists(audio_path):
-                    try:
-                        tts = gTTS(text=text, lang=lang, slow=slow)
-                        tts.save(audio_path)
-                    # gTTSError: API/network failure; OSError: writing the
-                    # MP3; ValueError: unsupported language code (the
-                    # settings dialog lets users type any value).
-                    except (gTTSError, OSError, ValueError) as e:
-                        print(f"Text-to-speech failed for '{text}': {e}")
-                        return
+                if not os.path.exists(audio_path) and not self._synthesize(
+                    text, lang, slow, audio_path
+                ):
+                    return
 
                 self._update_cache(cache_key, audio_path)
 
             self._play(audio_path)
+
+    def _synthesize(self, text, lang, slow, audio_path):
+        """Generate speech into ``audio_path`` atomically; return success.
+
+        gTTS.save() opens its target before making the request, so saving
+        straight to ``audio_path`` would leave an empty file behind on
+        failure, which the exists() check would then treat as cached forever.
+        """
+        tmp_path = None
+        try:
+            fd, tmp_path = tempfile.mkstemp(dir=self.cache_dir, suffix=".part")
+            os.close(fd)
+            gTTS(text=text, lang=lang, slow=slow).save(tmp_path)
+            os.replace(tmp_path, audio_path)
+            return True
+        # gTTSError: API/network failure; OSError: writing the MP3;
+        # ValueError: unsupported language code (the settings dialog lets
+        # users type any value).
+        except (gTTSError, OSError, ValueError) as e:
+            print(f"Text-to-speech failed for '{text}': {e}")
+            if tmp_path is not None and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            return False
 
     def _play(self, audio_path):
         if self._player is None:

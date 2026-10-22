@@ -43,19 +43,52 @@ def default_setting(name):
     return PROFILE_SETTINGS[name][2]
 
 
+def _coerce(name, value):
+    """Check a profile value has the setting's type, parsing strings.
+
+    Profiles are hand-editable JSON, so e.g. ``"enable_voice": "false"``
+    (a truthy string) or a camera_index that cv2.VideoCapture() would open as
+    a URL or file must not be used as-is. Returns None if unusable.
+    """
+    _, parse, default = PROFILE_SETTINGS[name]
+    expected = type(default)
+    if type(value) is expected:
+        return value
+    if expected is float and type(value) is int:
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return parse(value)
+        except ValueError:
+            pass
+    print(f"Ignoring invalid {name!r} in profile: {value!r}")
+    return None
+
+
+def saved_setting(name, profile=None):
+    """The profile's value for a setting, else the built-in default.
+
+    Ignores env vars: this is what the settings dialog shows and saves, so a
+    one-off env override never gets written into the profile.
+    """
+    value = profile.get(name) if profile is not None else None
+    if value is not None:
+        value = _coerce(name, value)
+    return value if value is not None else default_setting(name)
+
+
 def resolve_setting(name, profile=None):
     """Return the effective value of a profile setting.
 
-    Three sources can provide a value:
-      - env_setting(name): the env var, or None if unset
-      - profile.get(name): what the user saved in their profile JSON, or None
-        if the profile doesn't set it (profile itself may be None)
-      - default_setting(name): the built-in default, always available
+    The env var wins (a one-off override), then the profile, then the
+    built-in default. Unusable values are reported and skipped.
     """
-    # TODO(you): decide which source wins. See the discussion in chat.
-    # Placeholder until then: profile, else default (env vars are ignored).
-    value = profile.get(name) if profile is not None else None
-    return value if value is not None else default_setting(name)
+    try:
+        value = env_setting(name)
+    except ValueError as e:
+        print(f"Ignoring invalid {PROFILE_SETTINGS[name][0]}: {e}")
+        value = None
+    return value if value is not None else saved_setting(name, profile)
 
 
 # Camera settings

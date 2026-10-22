@@ -1,7 +1,7 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
-from gesture_recognition.config import resolve_setting
+from gesture_recognition.config import saved_setting
 from gesture_recognition.user_profile import UserProfile
 
 
@@ -28,7 +28,7 @@ class SettingsDialog:
         camera_frame.pack(fill=tk.X, pady=5)
 
         ttk.Label(camera_frame, text="Camera Index:").grid(column=0, row=0, sticky=tk.W)
-        self.camera_var = tk.IntVar(value=resolve_setting("camera_index", self.profile))
+        self.camera_var = tk.IntVar(value=saved_setting("camera_index", self.profile))
         ttk.Spinbox(
             camera_frame, from_=0, to=10, textvariable=self.camera_var, width=5
         ).grid(column=1, row=0, padx=5)
@@ -43,7 +43,7 @@ class SettingsDialog:
             column=0, row=0, sticky=tk.W
         )
         self.confidence_var = tk.DoubleVar(
-            value=resolve_setting("detection_confidence", self.profile)
+            value=saved_setting("detection_confidence", self.profile)
         )
         confidence_scale = ttk.Scale(
             detect_frame,
@@ -60,7 +60,7 @@ class SettingsDialog:
         voice_frame.pack(fill=tk.X, pady=5)
 
         self.voice_enabled = tk.BooleanVar(
-            value=resolve_setting("enable_voice", self.profile)
+            value=saved_setting("enable_voice", self.profile)
         )
         ttk.Checkbutton(
             voice_frame, text="Enable Voice", variable=self.voice_enabled
@@ -69,7 +69,7 @@ class SettingsDialog:
         ttk.Label(voice_frame, text="Language:").grid(
             column=0, row=1, sticky=tk.W, pady=5
         )
-        self.language_var = tk.StringVar(value=resolve_setting("voice_language", self.profile))
+        self.language_var = tk.StringVar(value=saved_setting("voice_language", self.profile))
         languages = ["en", "es", "fr", "de", "it", "ja", "ko", "zh-CN"]
         language_combo = ttk.Combobox(
             voice_frame, textvariable=self.language_var, values=languages
@@ -89,10 +89,24 @@ class SettingsDialog:
 
     def save_settings(self):
         """Save settings to profile"""
-        self.profile.set("camera_index", self.camera_var.get())
-        self.profile.set("detection_confidence", self.confidence_var.get())
-        self.profile.set("enable_voice", self.voice_enabled.get())
-        self.profile.set("voice_language", self.language_var.get())
+        try:
+            values = {
+                "camera_index": self.camera_var.get(),
+                "detection_confidence": self.confidence_var.get(),
+                "enable_voice": self.voice_enabled.get(),
+                "voice_language": self.language_var.get(),
+            }
+        except tk.TclError:
+            # Text typed into the spinbox that isn't a whole number
+            messagebox.showerror(
+                "Invalid setting",
+                "Camera index must be a whole number.",
+                parent=self.root,
+            )
+            return
+
+        for name, value in values.items():
+            self.profile.set(name, value)
 
         if self.profile.save_profile():
             self.root.destroy()

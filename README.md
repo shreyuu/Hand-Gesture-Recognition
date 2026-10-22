@@ -165,7 +165,9 @@ The system can recognize 10 different hand gestures:
 ## Customization
 
 Settings are driven by `gesture_recognition/config.py` (with environment-variable
-overrides) and per-user profiles under `data/profiles/`.
+overrides) and per-user profiles under `data/profiles/`. When both set a value,
+the environment variable wins for that run; the settings dialog only edits the
+saved profile.
 
 ### Adjusting Detection Sensitivity
 
